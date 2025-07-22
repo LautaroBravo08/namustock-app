@@ -38,7 +38,8 @@ async function createRelease(versionType = 'patch') {
     // 4. Compilar APK para Android
     console.log('📱 Compilando APK para Android...');
     try {
-      execSync('npx cap build android --prod', { stdio: 'inherit' });
+      // Usar gradlew directamente para compilar el APK
+      execSync('cd android && ./gradlew assembleRelease', { stdio: 'inherit' });
     } catch (error) {
       console.log('⚠️ Error compilando APK, continuando...');
     }
