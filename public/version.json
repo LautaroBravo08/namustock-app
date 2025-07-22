@@ -1,0 +1,16 @@
+{
+  "version": "1.1.0",
+  "buildDate": "2025-01-22T10:00:00Z",
+  "platform": "android",
+  "features": [
+    "Mejoras en el sistema de actualizaciones",
+    "Corrección de errores menores",
+    "Optimizaciones de rendimiento"
+  ],
+  "releaseNotes": "Nueva versión con mejoras importantes para Android",
+  "downloads": {
+    "android": "/downloads/app-release-1.1.0.apk",
+    "ios": "/downloads/app-release-1.1.0.ipa"
+  },
+  "baseUrl": "https://tu-dominio.com"
+}
