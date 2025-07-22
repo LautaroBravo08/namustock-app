@@ -43,12 +43,9 @@ async function createRelease(versionType = 'patch') {
       console.log('⚠️ Error compilando APK, continuando...');
     }
     
-    // 5. Crear tag y push
-    console.log('🏷️ Creando tag en Git...');
-    execSync(`git add .`, { stdio: 'inherit' });
-    execSync(`git commit -m "chore: release v${newVersion}"`, { stdio: 'inherit' });
-    execSync(`git tag v${newVersion}`, { stdio: 'inherit' });
-    execSync(`git push origin main`, { stdio: 'inherit' });
+    // 5. Push cambios (npm version ya creó el commit y tag)
+    console.log('🏷️ Subiendo cambios a Git...');
+    execSync(`git push origin master`, { stdio: 'inherit' });
     execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
     
     // 6. Crear release en GitHub usando GitHub CLI
