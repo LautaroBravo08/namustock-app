@@ -15,7 +15,10 @@ function getCurrentVersion() {
 
 function updateVersion(type = 'patch') {
   console.log(`🔄 Actualizando versión (${type})...`);
-  execSync(`npm version ${type}`, { stdio: 'inherit' });
+  
+  // Usar nuestro script personalizado que actualiza TODOS los archivos
+  execSync(`node update-version.js ${type}`, { stdio: 'inherit' });
+  
   return getCurrentVersion();
 }
 
@@ -53,7 +56,17 @@ async function createRelease(versionType = 'patch') {
       }
     }
     
-    // 5. Push cambios (npm version ya creó el commit y tag)
+    // 5. Crear commit y tag manualmente
+    console.log('📝 Creando commit y tag...');
+    try {
+      execSync('git add .', { stdio: 'inherit' });
+      execSync(`git commit -m "🚀 Release v${newVersion}"`, { stdio: 'inherit' });
+      execSync(`git tag -a v${newVersion} -m "Release version ${newVersion}"`, { stdio: 'inherit' });
+    } catch (error) {
+      console.log('⚠️ Error creando commit/tag, continuando...');
+    }
+    
+    // 6. Push cambios
     console.log('🏷️ Subiendo cambios a Git...');
     try {
       // Detectar la rama principal actual
@@ -65,7 +78,7 @@ async function createRelease(versionType = 'patch') {
       console.log('⚠️ Error subiendo cambios a Git, continuando...');
     }
     
-    // 6. Crear release en GitHub usando GitHub CLI
+    // 7. Crear release en GitHub usando GitHub CLI
     console.log('🐙 Creando release en GitHub...');
     const releaseNotes = `## Versión ${newVersion}
 
@@ -88,7 +101,7 @@ async function createRelease(versionType = 'patch') {
 
     execSync(`gh release create v${newVersion} --title "Versión ${newVersion}" --notes "${releaseNotes}"`, { stdio: 'inherit' });
     
-    // 7. Subir APK al release (si existe)
+    // 8. Subir APK al release (si existe)
     const apkPaths = [
       'android/app/build/outputs/apk/release/app-release.apk',
       'android/app/build/outputs/apk/release/app-release-unsigned.apk',
