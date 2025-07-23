@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw } from 'lucide-react';
+import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import updateService from '../services/updateService';
 
@@ -13,6 +13,20 @@ const UserMenu = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const menuRef = useRef(null);
+
+  // Obtener versión de la aplicación
+  const getAppVersion = () => {
+    const installedVersion = localStorage.getItem('installed-app-version');
+    const codeVersion = process.env.REACT_APP_VERSION || '1.0.0';
+    
+    // Si hay versión instalada y es diferente a la del código, mostrar ambas
+    if (installedVersion && installedVersion !== codeVersion) {
+      return `v${installedVersion} → v${codeVersion}`;
+    }
+    
+    // Mostrar la versión instalada o la del código
+    return `v${installedVersion || codeVersion}`;
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -85,6 +99,12 @@ const UserMenu = ({
             <p className="text-xs text-[var(--color-text-secondary)] truncate">
               {user.email}
             </p>
+            <div className="flex items-center gap-1 mt-1">
+              <Info className="h-3 w-3 text-[var(--color-text-secondary)]" />
+              <p className="text-xs text-[var(--color-text-secondary)] font-mono">
+                {getAppVersion()}
+              </p>
+            </div>
           </div>
           
           <button 
