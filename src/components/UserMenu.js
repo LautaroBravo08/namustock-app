@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info } from 'lucide-react';
+import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import updateService from '../services/updateService';
 
@@ -60,6 +60,12 @@ const UserMenu = ({
   };
 
 
+
+  const handleShowDebugLogs = () => {
+    setIsMenuOpen(false);
+    // Disparar evento personalizado para mostrar el DebugLogger
+    window.dispatchEvent(new CustomEvent('showDebugLogger'));
+  };
 
   const handleLogout = async () => {
     const { error } = await logoutUser();
@@ -136,7 +142,13 @@ const UserMenu = ({
             {isCheckingUpdates ? 'Comprobando...' : 'Comprobar actualizaciones'}
           </button>
 
-
+          <button 
+            onClick={handleShowDebugLogs}
+            className="w-full text-left px-4 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg)] flex items-center gap-2"
+          >
+            <Bug className="h-4 w-4" /> 
+            Debug Logs
+          </button>
           
           <hr className="my-1 border-[var(--color-border)]" />
           

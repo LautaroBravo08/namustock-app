@@ -15,7 +15,8 @@ const DebugLogger = () => {
       
       // Solo capturar logs relacionados con actualizaciones
       if (message.includes('🔍') || message.includes('📱') || message.includes('🐙') || 
-          message.includes('✅') || message.includes('❌') || message.includes('COMPARANDO')) {
+          message.includes('✅') || message.includes('❌') || message.includes('COMPARANDO') ||
+          message.includes('📦') || message.includes('FORZANDO')) {
         setLogs(prev => [...prev.slice(-20), {
           id: Date.now(),
           message,
@@ -38,9 +39,17 @@ const DebugLogger = () => {
       originalError.apply(console, args);
     };
 
+    // Escuchar evento personalizado del UserMenu
+    const handleShowDebugLogger = () => {
+      setIsVisible(true);
+    };
+
+    window.addEventListener('showDebugLogger', handleShowDebugLogger);
+
     return () => {
       console.log = originalLog;
       console.error = originalError;
+      window.removeEventListener('showDebugLogger', handleShowDebugLogger);
     };
   }, []);
 
