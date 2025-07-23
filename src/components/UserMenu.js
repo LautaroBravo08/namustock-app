@@ -59,13 +59,7 @@ const UserMenu = ({
     }
   };
 
-  const handleResetVersions = () => {
-    if (window.confirm('¿Resetear versiones almacenadas? (Solo para debugging)')) {
-      updateService.resetVersions();
-      showNotification('Versiones reseteadas. Recarga la página.');
-      setIsMenuOpen(false);
-    }
-  };
+
 
   const handleLogout = async () => {
     const { error } = await logoutUser();
@@ -142,16 +136,7 @@ const UserMenu = ({
             {isCheckingUpdates ? 'Comprobando...' : 'Comprobar actualizaciones'}
           </button>
 
-          {/* Botón de reset solo en desarrollo */}
-          {(process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') && (
-            <button 
-              onClick={handleResetVersions}
-              className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" /> 
-              Reset Versiones (Debug)
-            </button>
-          )}
+
           
           <hr className="my-1 border-[var(--color-border)]" />
           

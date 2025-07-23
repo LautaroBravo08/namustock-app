@@ -21,44 +21,16 @@ class UpdateService {
     });
   }
 
-  // Inicializar versión instalada
+  // Inicializar versión instalada - SIMPLIFICADO
   initializeInstalledVersion() {
-    const installedVersion = localStorage.getItem('installed-app-version');
+    console.log('🚀 Inicializando sistema de versiones...');
     
-    console.log('🔍 Estado de versiones:', {
-      codigo: this.currentVersion,
-      instalada: installedVersion
-    });
-    
-    // RESET COMPLETO: Limpiar datos antiguos y usar versión actual
-    console.log('🧹 Limpiando datos de versiones anteriores...');
-    localStorage.removeItem('last-checked-version');
-    localStorage.removeItem('app-version'); // versión antigua del sistema web
-    
-    // Siempre establecer la versión del código como instalada
-    localStorage.setItem('installed-app-version', this.currentVersion);
-    
-    console.log('✅ Versión sincronizada:', this.currentVersion);
-    
-    // Si había una versión anterior diferente, notificar actualización completada
-    if (installedVersion && installedVersion !== this.currentVersion) {
-      setTimeout(() => {
-        this.notifyListeners({
-          type: 'update-completed',
-          previousVersion: installedVersion,
-          currentVersion: this.currentVersion
-        });
-      }, 1000);
-    }
-  }
-
-  // Función para limpiar y resetear versiones (útil para debugging)
-  resetVersions() {
-    console.log('🧹 Limpiando versiones almacenadas');
+    // Limpiar TODOS los datos de versiones anteriores
     localStorage.removeItem('installed-app-version');
     localStorage.removeItem('last-checked-version');
-    localStorage.removeItem('app-version'); // versión legacy
-    this.initializeInstalledVersion();
+    localStorage.removeItem('app-version');
+    
+    console.log('✅ Sistema de versiones limpio. Versión actual:', this.currentVersion);
   }
 
   // Agregar listener para cambios de estado
@@ -187,103 +159,48 @@ class UpdateService {
     try {
       const platform = Capacitor.getPlatform();
       console.log(`🔍 Verificando actualizaciones para ${platform}...`);
+      console.log(`📱 Versión actual: ${this.currentVersion}`);
+
+      // SOLO verificar desde GitHub (fuente única de verdad)
+      const githubRepo = process.env.REACT_APP_GITHUB_REPO;
+      if (!githubRepo) {
+        console.log('❌ No hay repositorio de GitHub configurado');
+        return { available: false, platform: platform };
+      }
+
+      const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
+      if (!response.ok) {
+        console.log('❌ Error obteniendo release de GitHub');
+        return { available: false, platform: platform };
+      }
+
+      const release = await response.json();
+      const latestVersion = release.tag_name.replace('v', '');
+      console.log(`🐙 Última versión en GitHub: ${latestVersion}`);
       
-      // Obtener versión instalada (puede ser diferente a la del package.json)
-      const installedVersion = localStorage.getItem('installed-app-version') || this.currentVersion;
-      console.log(`📱 Versión instalada: ${installedVersion}`);
-      console.log(`📦 Versión del código: ${this.currentVersion}`);
-
-      // Opción 1: Verificar desde tu propio servidor/API
-      try {
-        const response = await fetch('/version.json?' + Date.now());
-        if (response.ok) {
-          const serverVersion = await response.json();
-          console.log(`🌐 Versión del servidor: ${serverVersion.version}`);
-          
-          // Comparar con la versión instalada, no con la del código
-          if (this.isNewerVersion(serverVersion.version, installedVersion)) {
-            return {
-              available: true,
-              version: serverVersion.version,
-              currentVersion: installedVersion,
-              platform: platform,
-              buildDate: serverVersion.buildDate,
-              features: serverVersion.features,
-              downloadUrl: this.getMobileDownloadUrlFromServer(serverVersion, platform),
-              releaseNotes: serverVersion.releaseNotes || 'Nueva versión disponible'
-            };
-          }
-        }
-      } catch (serverError) {
-        console.log('📡 Server version check failed, trying GitHub...', serverError);
-      }
-
-      // Opción 2: Verificar desde GitHub (si tienes un repositorio configurado)
-      const githubRepo = process.env.REACT_APP_GITHUB_REPO; // ej: "usuario/repo"
-      if (githubRepo) {
-        try {
-          const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
-          if (response.ok) {
-            const release = await response.json();
-            const latestVersion = release.tag_name.replace('v', '');
-            console.log(`🐙 GitHub versión: ${latestVersion}`);
-            
-            // Comparar con la versión instalada, no con la del código
-            if (this.isNewerVersion(latestVersion, installedVersion)) {
-              return {
-                available: true,
-                version: latestVersion,
-                currentVersion: installedVersion,
-                platform: platform,
-                downloadUrl: this.getMobileDownloadUrl(release),
-                releaseNotes: release.body || 'Nueva versión disponible'
-              };
-            }
-          }
-        } catch (githubError) {
-          console.log('🐙 GitHub check failed:', githubError);
-        }
-      }
-
-      // Opción 3: Simulación para desarrollo/testing
-      if (process.env.NODE_ENV === 'development' || process.env.REACT_APP_SIMULATE_UPDATE === 'true') {
-        console.log('🧪 Modo desarrollo: simulando actualización disponible');
+      // Comparar SOLO con la versión actual del código
+      if (this.isNewerVersion(latestVersion, this.currentVersion)) {
+        console.log(`✅ Nueva versión disponible: ${latestVersion}`);
         return {
           available: true,
-          version: '2.0.0',
+          version: latestVersion,
           currentVersion: this.currentVersion,
           platform: platform,
-          downloadUrl: 'https://example.com/app-release.apk',
-          releaseNotes: 'Versión de prueba para desarrollo',
-          isSimulated: true
+          downloadUrl: this.getMobileDownloadUrl(release),
+          releaseNotes: release.body || 'Nueva versión disponible'
         };
       }
 
-      console.log('✅ No hay actualizaciones disponibles');
-      return { available: false, platform: platform, currentVersion: this.currentVersion };
+      console.log('✅ Ya tienes la última versión');
+      return { available: false, platform: platform };
 
     } catch (error) {
-      console.error('❌ Mobile update check failed:', error);
-      return { available: false, platform: Capacitor.getPlatform(), error: error.message };
+      console.error('❌ Error verificando actualizaciones:', error);
+      return { available: false, platform: Capacitor.getPlatform() };
     }
   }
 
-  // Obtener URL de descarga para móvil desde el servidor
-  getMobileDownloadUrlFromServer(serverVersion, platform) {
-    if (serverVersion.downloads && serverVersion.downloads[platform]) {
-      return serverVersion.downloads[platform];
-    }
-    
-    // URLs por defecto basadas en la plataforma
-    const baseUrl = serverVersion.baseUrl || window.location.origin;
-    if (platform === 'android') {
-      return `${baseUrl}/downloads/app-release-${serverVersion.version}.apk`;
-    } else if (platform === 'ios') {
-      return `${baseUrl}/downloads/app-release-${serverVersion.version}.ipa`;
-    }
-    
-    return null;
-  }
+
 
   // Obtener URL de descarga para móvil desde GitHub
   getMobileDownloadUrl(release) {
