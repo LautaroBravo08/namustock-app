@@ -38,16 +38,24 @@ async function createRelease(versionType = 'patch') {
     // 4. Compilar APK para Android
     console.log('📱 Compilando APK para Android...');
     try {
-      // Usar gradlew directamente para compilar el APK
-      execSync('cd android && ./gradlew assembleRelease', { stdio: 'inherit' });
+      // Usar gradlew para compilar el APK (Windows usa .bat)
+      const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+      execSync(`cd android && ${gradlewCmd} clean assembleRelease`, { stdio: 'inherit' });
     } catch (error) {
       console.log('⚠️ Error compilando APK, continuando...');
     }
     
     // 5. Push cambios (npm version ya creó el commit y tag)
     console.log('🏷️ Subiendo cambios a Git...');
-    execSync(`git push origin master`, { stdio: 'inherit' });
-    execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
+    try {
+      // Detectar la rama principal actual
+      const currentBranch = execSync('git branch --show-current', { encoding: 'utf8' }).trim();
+      console.log(`📍 Rama actual: ${currentBranch}`);
+      execSync(`git push origin ${currentBranch}`, { stdio: 'inherit' });
+      execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
+    } catch (error) {
+      console.log('⚠️ Error subiendo cambios a Git, continuando...');
+    }
     
     // 6. Crear release en GitHub usando GitHub CLI
     console.log('🐙 Creando release en GitHub...');
@@ -73,13 +81,27 @@ async function createRelease(versionType = 'patch') {
     execSync(`gh release create v${newVersion} --title "Versión ${newVersion}" --notes "${releaseNotes}"`, { stdio: 'inherit' });
     
     // 7. Subir APK al release (si existe)
-    const apkPath = 'android/app/build/outputs/apk/release/app-release.apk';
-    if (fs.existsSync(apkPath)) {
-      console.log('📤 Subiendo APK al release...');
-      execSync(`gh release upload v${newVersion} ${apkPath}`, { stdio: 'inherit' });
-      console.log('✅ APK subido exitosamente');
-    } else {
-      console.log('⚠️ APK no encontrado, saltando subida');
+    const apkPaths = [
+      'android/app/build/outputs/apk/release/app-release.apk',
+      'android/app/build/outputs/apk/release/app-release-unsigned.apk',
+      'android/app/build/outputs/apk/debug/app-debug.apk'
+    ];
+    
+    let apkFound = false;
+    for (const apkPath of apkPaths) {
+      if (fs.existsSync(apkPath)) {
+        console.log(`📤 Subiendo APK al release: ${apkPath}`);
+        execSync(`gh release upload v${newVersion} "${apkPath}"`, { stdio: 'inherit' });
+        console.log('✅ APK subido exitosamente');
+        apkFound = true;
+        break;
+      }
+    }
+    
+    if (!apkFound) {
+      console.log('⚠️ APK no encontrado en ninguna ubicación esperada');
+      console.log('📍 Ubicaciones verificadas:');
+      apkPaths.forEach(path => console.log(`   - ${path}`));
     }
     
     console.log(`\n🎉 Release v${newVersion} creado exitosamente!`);
