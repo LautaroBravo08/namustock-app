@@ -4,8 +4,11 @@ import { BarChart2 } from 'lucide-react';
 // Styles
 import './styles/globals.css';
 
-// Firebase
+// Hooks
 import { useAuth } from './hooks/useAuth';
+import useVersionCleanup from './hooks/useVersionCleanup';
+
+// Firebase
 import { saveProducts, getProducts, onProductsChange, saveSale, getSales, onSalesChange, saveUserSettings, getUserSettings, deleteSales } from './firebase/firestore';
 
 // Components
@@ -35,6 +38,9 @@ import { themes } from './data/themes';
 import { roundUpToMultiple, formatNumber } from './utils/helpers';
 
 export default function App() {
+    // LIMPIEZA FORZADA DE VERSIONES AL INICIAR
+    useVersionCleanup();
+    
     // Authentication
     const { user, loading: authLoading } = useAuth();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
