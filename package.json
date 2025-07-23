@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^7.4.2",
