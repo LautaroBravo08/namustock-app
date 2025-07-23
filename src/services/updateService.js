@@ -25,22 +25,23 @@ class UpdateService {
   initializeInstalledVersion() {
     const installedVersion = localStorage.getItem('installed-app-version');
     
-    if (!installedVersion) {
-      // Primera vez que se ejecuta la app, marcar versión actual como instalada
-      console.log('🆕 Primera ejecución, marcando versión actual como instalada:', this.currentVersion);
-      localStorage.setItem('installed-app-version', this.currentVersion);
-    } else if (installedVersion !== this.currentVersion) {
-      // La versión del código es diferente a la instalada
-      // Esto puede pasar después de una actualización exitosa
-      console.log('🔄 Versión del código actualizada:', {
-        instalada: installedVersion,
-        codigo: this.currentVersion
-      });
-      
-      // Actualizar la versión instalada a la del código actual
-      localStorage.setItem('installed-app-version', this.currentVersion);
-      
-      // Notificar que se completó una actualización
+    console.log('🔍 Estado de versiones:', {
+      codigo: this.currentVersion,
+      instalada: installedVersion
+    });
+    
+    // RESET COMPLETO: Limpiar datos antiguos y usar versión actual
+    console.log('🧹 Limpiando datos de versiones anteriores...');
+    localStorage.removeItem('last-checked-version');
+    localStorage.removeItem('app-version'); // versión antigua del sistema web
+    
+    // Siempre establecer la versión del código como instalada
+    localStorage.setItem('installed-app-version', this.currentVersion);
+    
+    console.log('✅ Versión sincronizada:', this.currentVersion);
+    
+    // Si había una versión anterior diferente, notificar actualización completada
+    if (installedVersion && installedVersion !== this.currentVersion) {
       setTimeout(() => {
         this.notifyListeners({
           type: 'update-completed',
@@ -49,6 +50,15 @@ class UpdateService {
         });
       }, 1000);
     }
+  }
+
+  // Función para limpiar y resetear versiones (útil para debugging)
+  resetVersions() {
+    console.log('🧹 Limpiando versiones almacenadas');
+    localStorage.removeItem('installed-app-version');
+    localStorage.removeItem('last-checked-version');
+    localStorage.removeItem('app-version'); // versión legacy
+    this.initializeInstalledVersion();
   }
 
   // Agregar listener para cambios de estado

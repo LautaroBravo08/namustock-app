@@ -1,12 +1,15 @@
 {
-  "version": "1.0.18",
-  "buildDate": "2025-07-23T00:45:00.000Z",
+  "version": "1.0.21",
+  "buildDate": "2025-07-23T01:25:00.000Z",
   "platform": "android",
   "features": [
-    "APK firmado para instalación correcta",
-    "Sistema de actualizaciones mejorado",
-    "Corrección del loop infinito de actualizaciones",
-    "Optimizaciones de rendimiento"
+    "Sistema de inventario completo",
+    "Gestión de ventas",
+    "Análisis de productos",
+    "Notificaciones automáticas",
+    "Auto-actualización mejorada",
+    "Validaciones de formularios",
+    "Versión visible en menú de usuario"
   ],
   "releaseNotes": "Nueva versión 1.0.18 con APK firmado y sistema de actualizaciones corregido",
   "downloads": {

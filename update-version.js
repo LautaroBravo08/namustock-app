@@ -71,17 +71,31 @@ try {
   fs.writeFileSync(versionPath, JSON.stringify(updatedVersionData, null, 2));
   fs.writeFileSync(packagePath, JSON.stringify(updatedPackageData, null, 2));
   
-  // Actualizar service worker con nueva versión
-  const swPath = path.join(__dirname, 'public', 'sw.js');
-  let swContent = fs.readFileSync(swPath, 'utf8');
+  // Actualizar .env.production
+  const envProductionPath = path.join(__dirname, '.env.production');
+  let envContent = fs.readFileSync(envProductionPath, 'utf8');
   
-  // Reemplazar versión en service worker
-  swContent = swContent.replace(
-    /const CACHE_NAME = 'tienda-moderna-v[\d.]+';/,
-    `const CACHE_NAME = 'tienda-moderna-v${newVersion}';`
+  // Reemplazar versión en .env.production
+  envContent = envContent.replace(
+    /REACT_APP_VERSION=[\d.]+/,
+    `REACT_APP_VERSION=${newVersion}`
   );
   
-  fs.writeFileSync(swPath, swContent);
+  fs.writeFileSync(envProductionPath, envContent);
+  
+  // Actualizar service worker con nueva versión
+  const swPath = path.join(__dirname, 'public', 'sw.js');
+  if (fs.existsSync(swPath)) {
+    let swContent = fs.readFileSync(swPath, 'utf8');
+    
+    // Reemplazar versión en service worker
+    swContent = swContent.replace(
+      /const CACHE_NAME = 'tienda-moderna-v[\d.]+';/,
+      `const CACHE_NAME = 'tienda-moderna-v${newVersion}';`
+    );
+    
+    fs.writeFileSync(swPath, swContent);
+  }
   
   console.log(`✅ Versión actualizada de ${versionData.version} a ${newVersion}`);
   console.log(`📦 Tipo de actualización: ${updateType}`);

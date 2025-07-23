@@ -16,16 +16,9 @@ const UserMenu = ({
 
   // Obtener versión de la aplicación
   const getAppVersion = () => {
-    const installedVersion = localStorage.getItem('installed-app-version');
-    const codeVersion = process.env.REACT_APP_VERSION || '1.0.0';
-    
-    // Si hay versión instalada y es diferente a la del código, mostrar ambas
-    if (installedVersion && installedVersion !== codeVersion) {
-      return `v${installedVersion} → v${codeVersion}`;
-    }
-    
-    // Mostrar la versión instalada o la del código
-    return `v${installedVersion || codeVersion}`;
+    // Siempre mostrar la versión del código actual (que es la que está ejecutándose)
+    const currentVersion = process.env.REACT_APP_VERSION || '1.0.0';
+    return `v${currentVersion}`;
   };
 
   useEffect(() => {
@@ -63,6 +56,14 @@ const UserMenu = ({
       showNotification('Error al comprobar actualizaciones');
     } finally {
       setIsCheckingUpdates(false);
+    }
+  };
+
+  const handleResetVersions = () => {
+    if (window.confirm('¿Resetear versiones almacenadas? (Solo para debugging)')) {
+      updateService.resetVersions();
+      showNotification('Versiones reseteadas. Recarga la página.');
+      setIsMenuOpen(false);
     }
   };
 
@@ -140,6 +141,17 @@ const UserMenu = ({
             <RefreshCw className={`h-4 w-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} /> 
             {isCheckingUpdates ? 'Comprobando...' : 'Comprobar actualizaciones'}
           </button>
+
+          {/* Botón de reset solo en desarrollo */}
+          {(process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') && (
+            <button 
+              onClick={handleResetVersions}
+              className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" /> 
+              Reset Versiones (Debug)
+            </button>
+          )}
           
           <hr className="my-1 border-[var(--color-border)]" />
           
