@@ -40,9 +40,17 @@ async function createRelease(versionType = 'patch') {
     try {
       // Usar gradlew para compilar el APK (Windows usa .bat)
       const gradlewCmd = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
+      console.log('🔄 Intentando compilar APK de release...');
       execSync(`cd android && ${gradlewCmd} clean assembleRelease`, { stdio: 'inherit' });
+      console.log('✅ APK de release compilado exitosamente');
     } catch (error) {
-      console.log('⚠️ Error compilando APK, continuando...');
+      console.log('⚠️ Error compilando APK de release, compilando APK de debug...');
+      try {
+        execSync(`cd android && ${gradlewCmd} clean assembleDebug`, { stdio: 'inherit' });
+        console.log('✅ APK de debug compilado exitosamente');
+      } catch (debugError) {
+        console.log('❌ Error compilando APK de debug también');
+      }
     }
     
     // 5. Push cambios (npm version ya creó el commit y tag)

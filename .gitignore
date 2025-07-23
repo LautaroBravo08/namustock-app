@@ -139,4 +139,8 @@ dist_electron/
 # Firebase
 .firebase/
 firebase-debug.log
-firestore-debug.log
+firestore-debug.log# Android s
+igning
+android/keystore.properties
+android/app/*.keystore
+*.keystore
