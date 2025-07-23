@@ -27,6 +27,7 @@ import EmailVerificationBanner from './components/EmailVerificationBanner';
 import Notification from './components/Notification';
 import NotificationSettings from './components/NotificationSettings';
 import UpdateNotification from './components/UpdateNotification';
+import DebugLogger from './components/DebugLogger';
 
 // Services and hooks
 import notificationService from './services/notificationService';
@@ -665,6 +666,7 @@ export default function App() {
             />
 
             <UpdateNotification />
+            <DebugLogger />
         </div>
     );
 }
