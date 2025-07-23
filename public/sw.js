@@ -1,5 +1,5 @@
 // Service Worker para actualizaciones automáticas
-const CACHE_NAME = 'tienda-moderna-v1.0.30';
+const CACHE_NAME = 'namustock-app-v1.0.31';
 const VERSION_URL = '/version.json';
 
 const urlsToCache = [

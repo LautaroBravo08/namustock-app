@@ -1,7 +1,7 @@
 {
-  "version": "1.0.30",
-  "buildDate": "2025-07-23T05:59:22.397Z",
-  "platform": "android",
+  "version": "1.0.31",
+  "buildDate": "2025-07-23T08:35:54.455Z",
+  "buildNumber": 1753259754455,
   "features": [
     "Sistema de inventario completo",
     "Gestión de ventas",
@@ -9,12 +9,16 @@
     "Notificaciones automáticas",
     "Auto-actualización mejorada",
     "Validaciones de formularios",
-    "Eliminación de ventas corregida"
+    "Soporte multiplataforma"
   ],
-  "releaseNotes": "Nueva versión 1.0.30 con mejoras y correcciones",
+  "releaseNotes": "Nueva versión 1.0.31 con mejoras y correcciones",
   "downloads": {
-    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.30/app-release.apk",
-    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.30/app-release.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.31/app-release.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.31/app-release.ipa",
+    "windows": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.31/namustock-app-setup.exe",
+    "mac": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.31/namustock-app.dmg",
+    "linux": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.31/namustock-app.AppImage"
   },
-  "baseUrl": "https://github.com/LautaroBravo08/namustock-app"
+  "repository": "https://github.com/LautaroBravo08/namustock-app",
+  "environment": "development"
 }

@@ -57,24 +57,13 @@ const DebugLogger = () => {
     setLogs([]);
   };
 
-  if (!isVisible && logs.length === 0) {
+  // Solo mostrar si está visible (controlado desde UserMenu)
+  if (!isVisible) {
     return null;
   }
 
   return (
     <>
-      {/* Botón flotante para mostrar/ocultar logs */}
-      {!isVisible && logs.length > 0 && (
-        <button
-          onClick={() => setIsVisible(true)}
-          className="fixed bottom-20 right-4 z-50 bg-orange-500 text-white p-3 rounded-full shadow-lg"
-        >
-          <Bug className="h-5 w-5" />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-            {logs.length}
-          </span>
-        </button>
-      )}
 
       {/* Panel de logs */}
       {isVisible && (
