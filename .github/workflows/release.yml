@@ -4,213 +4,44 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version type (patch, minor, major)'
-        required: false
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-
-env:
-  NODE_VERSION: '20'
-  JAVA_VERSION: '17'
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
     
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      apk-path: ${{ steps.build.outputs.apk-path }}
-      aab-path: ${{ steps.build.outputs.aab-path }}
-    
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v3
     
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v3
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        node-version: '18'
         cache: 'npm'
     
     - name: Install dependencies
       run: npm ci
     
-    - name: Load app configuration
-      id: config
-      run: |
-        node -e "
-        const config = require('./config/app.config.js');
-        console.log('APP_NAME=' + config.app.displayName);
-        console.log('APP_ID=' + config.app.id);
-        console.log('REPO_URL=' + config.repository.url);
-        " >> $GITHUB_OUTPUT
-    
-    - name: Get version info
-      id: version
-      run: |
-        VERSION=$(node -e "console.log(require('./package.json').version)")
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $VERSION"
-    
-    - name: Run tests
-      run: npm test -- --watchAll=false --passWithNoTests --coverage=false
-    
-    - name: Build web application
+    - name: Build web app
       run: npm run build
     
     - name: Setup Java
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
-        java-version: ${{ env.JAVA_VERSION }}
+        java-version: '17'
     
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        api-level: 34
-        build-tools: 34.0.0
+      uses: android-actions/setup-android@v2
     
-    - name: Decode Keystore
-      if: ${{ secrets.KEYSTORE_FILE }}
+    - name: Build Android APK
       run: |
-        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > android/app/release-key.keystore
-    
-    - name: Create keystore.properties
-      if: ${{ secrets.KEYSTORE_FILE }}
-      run: |
-        echo "storeFile=release-key.keystore" > android/keystore.properties
-        echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/keystore.properties
-        echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/keystore.properties
-        echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/keystore.properties
-    
-    - name: Sync Capacitor
-      run: npx cap sync android
-    
-    - name: Grant execute permission for gradlew
-      run: chmod +x android/gradlew
-    
-    - name: Build Android APK and AAB
-      id: build
-      run: |
+        npx cap sync android
         cd android
-        
-        # Build signed APK and AAB
-        if [ -f "keystore.properties" ]; then
-          echo "🔐 Building signed release..."
-          ./gradlew assembleRelease bundleRelease
-        else
-          echo "⚠️  Building unsigned release (no keystore configured)..."
-          ./gradlew assembleRelease bundleRelease
-        fi
-        
-        # Set output paths dynamically
-        APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-        AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" | head -1)
-        
-        # Convert to relative paths
-        APK_PATH="android/${APK_PATH#*/}"
-        AAB_PATH="android/${AAB_PATH#*/}"
-        
-        echo "apk-path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "aab-path=$AAB_PATH" >> $GITHUB_OUTPUT
-        
-        echo "✅ Build completed:"
-        echo "   APK: $APK_PATH"
-        echo "   AAB: $AAB_PATH"
-        
-        # Verify files exist
-        ls -la app/build/outputs/apk/release/
-        ls -la app/build/outputs/bundle/release/
+        ./gradlew assembleRelease
     
-    - name: Generate release notes
-      id: release_notes
-      run: |
-        node -e "
-        const config = require('./config/app.config.js');
-        const version = '${{ steps.version.outputs.version }}';
-        
-        const notes = \`## 🚀 Nueva versión \${version}
-
-### ✨ Características principales
-\${config.features.map(f => '- ' + f).join('\n')}
-
-### 📱 Descargas
-- **Android APK**: Descarga directa desde esta release
-- **Android AAB**: Para distribución en Play Store
-
-### 🔧 Información técnica
-- **Versión**: \${version}
-- **Fecha de build**: \${new Date().toISOString()}
-- **Plataformas**: Android, iOS, Web, Desktop
-
-### 📋 Instalación Android
-1. Descarga el archivo APK
-2. Habilita 'Fuentes desconocidas' en tu dispositivo
-3. Instala la aplicación
-4. ¡Disfruta de las nuevas características!
-
----
-*Release generado automáticamente* 🤖\`;
-
-        console.log(notes);
-        " > release_notes.md
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
+    - name: Upload APK to Release
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ steps.version.outputs.version }}
-        name: Release v${{ steps.version.outputs.version }}
-        body_path: release_notes.md
-        files: |
-          ${{ steps.build.outputs.apk-path }}
-          ${{ steps.build.outputs.aab-path }}
-        draft: false
-        prerelease: false
-        generate_release_notes: true
+        files: android/app/build/outputs/apk/release/app-release.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Update version.json with download URLs
-      run: |
-        node -e "
-        const fs = require('fs');
-        const config = require('./config/app.config.js');
-        const version = '${{ steps.version.outputs.version }}';
-        
-        // Update config with actual release URLs
-        config.app.version = version;
-        const versionInfo = config.generateVersionInfo();
-        
-        // Update download URLs to point to the actual release
-        versionInfo.downloads.android = \`\${config.repository.url}/releases/download/v\${version}/app-release.apk\`;
-        versionInfo.downloads.androidBundle = \`\${config.repository.url}/releases/download/v\${version}/app-release.aab\`;
-        
-        fs.writeFileSync('public/version.json', JSON.stringify(versionInfo, null, 2));
-        console.log('✅ version.json updated with release URLs');
-        "
-    
-    - name: Commit updated version.json
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add public/version.json
-        git diff --staged --quiet || git commit -m "📦 Update version.json with release URLs [skip ci]"
-        git push origin HEAD:${{ github.ref_name }} || echo "No changes to push"
-    
-    - name: Deployment summary
-      run: |
-        echo "🎉 Release completed successfully!"
-        echo "📦 Version: ${{ steps.version.outputs.version }}"
-        echo "🔗 Release URL: ${{ steps.config.outputs.REPO_URL }}/releases/tag/v${{ steps.version.outputs.version }}"
-        echo "📱 APK: ${{ steps.build.outputs.apk-path }}"
-        echo "📦 AAB: ${{ steps.build.outputs.aab-path }}"

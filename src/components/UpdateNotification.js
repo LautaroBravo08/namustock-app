@@ -7,6 +7,7 @@ const UpdateNotification = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadMessage, setDownloadMessage] = useState('');
   const [updateStatus, setUpdateStatus] = useState('idle'); // idle, downloading, installing, completed, error
 
   useEffect(() => {
@@ -15,30 +16,30 @@ const UpdateNotification = () => {
         setUpdateInfo(data.updateInfo);
         setIsVisible(true);
         setUpdateStatus('idle');
-      } else if (data.type === 'download-started') {
-        setUpdateStatus('downloading');
         setDownloadProgress(0);
+        setDownloadMessage('');
       } else if (data.type === 'download-progress') {
+        setUpdateStatus('downloading');
         setDownloadProgress(data.progress || 0);
-        if (data.status === 'downloading') {
-          setUpdateStatus('downloading');
-        } else if (data.status === 'installing') {
-          setUpdateStatus('installing');
-        } else if (data.status === 'completed') {
-          setUpdateStatus('completed');
-          // Ocultar notificación después de completar
-          setTimeout(() => {
-            setIsVisible(false);
-            setUpdateInfo(null);
-            setUpdateStatus('idle');
-          }, 2000);
-        } else if (data.status === 'error') {
-          setUpdateStatus('error');
-        }
+        setDownloadMessage(data.message || 'Descargando...');
+      } else if (data.type === 'installation-started') {
+        setUpdateStatus('installing');
+        setDownloadProgress(100);
+        setDownloadMessage(data.message || 'Instalando...');
       } else if (data.type === 'update-completed') {
-        // Mostrar notificación de actualización completada exitosamente
-        console.log('🎉 Actualización completada:', data);
-        // Opcional: mostrar un toast o notificación de éxito
+        setUpdateStatus('completed');
+        setDownloadMessage('¡Actualización completada!');
+        // Ocultar notificación después de completar
+        setTimeout(() => {
+          setIsVisible(false);
+          setUpdateInfo(null);
+          setUpdateStatus('idle');
+          setDownloadProgress(0);
+          setDownloadMessage('');
+        }, 3000);
+      } else if (data.type === 'update-error') {
+        setUpdateStatus('error');
+        setDownloadMessage(data.message || 'Error durante la actualización');
       }
     };
 
@@ -57,13 +58,26 @@ const UpdateNotification = () => {
     if (!updateInfo) return;
 
     setIsUpdating(true);
+    setUpdateStatus('downloading');
+    setDownloadProgress(0);
+    setDownloadMessage('Iniciando descarga...');
+    
     try {
       await updateService.applyUpdate(updateInfo);
       // Si llegamos aquí, la actualización fue exitosa
-      setIsVisible(false);
+      setUpdateStatus('completed');
+      setDownloadMessage('¡Actualización completada!');
+      setTimeout(() => {
+        setIsVisible(false);
+        setUpdateInfo(null);
+        setUpdateStatus('idle');
+        setDownloadProgress(0);
+        setDownloadMessage('');
+      }, 3000);
     } catch (error) {
       console.error('Error durante la actualización:', error);
-      alert('Error al aplicar la actualización. Por favor, intenta de nuevo.');
+      setUpdateStatus('error');
+      setDownloadMessage('Error: ' + error.message);
     } finally {
       setIsUpdating(false);
     }
@@ -162,9 +176,9 @@ const UpdateNotification = () => {
 
           {/* Mostrar progreso y estado */}
           {updateStatus === 'downloading' && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex justify-between text-xs text-[var(--color-text-secondary)]">
-                <span>Descargando...</span>
+                <span>{downloadMessage || 'Descargando actualización...'}</span>
                 <span>{downloadProgress}%</span>
               </div>
               <div className="w-full bg-[var(--color-bg)] rounded-full h-2">
@@ -173,31 +187,47 @@ const UpdateNotification = () => {
                   style={{ width: `${downloadProgress}%` }}
                 ></div>
               </div>
+              <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
+                La actualización se instalará automáticamente
+              </div>
             </div>
           )}
 
           {updateStatus === 'installing' && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                 <RefreshCw className="h-3 w-3 animate-spin" />
-                <span>Instalando actualización...</span>
+                <span>{downloadMessage || 'Instalando actualización...'}</span>
               </div>
               <div className="w-full bg-[var(--color-bg)] rounded-full h-2">
                 <div className="bg-green-500 h-2 rounded-full w-full"></div>
+              </div>
+              <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
+                Sigue las instrucciones en pantalla para completar la instalación
               </div>
             </div>
           )}
 
           {updateStatus === 'completed' && (
-            <div className="flex items-center gap-2 text-xs text-green-600">
-              <Download className="h-3 w-3" />
-              <span>¡Actualización completada!</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-green-600">
+                <Download className="h-3 w-3" />
+                <span>¡Actualización completada!</span>
+              </div>
+              <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
+                Los archivos antiguos se limpiarán automáticamente
+              </div>
             </div>
           )}
 
           {updateStatus === 'error' && (
-            <div className="text-xs text-red-500">
-              Error durante la actualización. Intenta de nuevo.
+            <div className="space-y-1">
+              <div className="text-xs text-red-500 font-medium">
+                Error durante la actualización
+              </div>
+              <div className="text-xs text-[var(--color-text-secondary)]">
+                {downloadMessage || 'Intenta de nuevo o descarga manualmente'}
+              </div>
             </div>
           )}
         </div>
