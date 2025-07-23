@@ -1,5 +1,5 @@
 // Service Worker para actualizaciones automáticas
-const CACHE_NAME = 'tienda-moderna-v1.0.23';
+const CACHE_NAME = 'tienda-moderna-v1.0.24';
 const VERSION_URL = '/version.json';
 
 const urlsToCache = [
