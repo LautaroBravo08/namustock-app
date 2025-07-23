@@ -8,13 +8,47 @@ class UpdateService {
     this.isChecking = false;
     this.listeners = [];
     
+    // Inicializar versión instalada
+    this.initializeInstalledVersion();
+    
     // Log de inicialización
     console.log('🚀 UpdateService inicializado:', {
       currentVersion: this.currentVersion,
+      installedVersion: localStorage.getItem('installed-app-version'),
       platform: this.getPlatform(),
       checkInterval: this.updateCheckInterval,
       simulateUpdate: process.env.REACT_APP_SIMULATE_UPDATE
     });
+  }
+
+  // Inicializar versión instalada
+  initializeInstalledVersion() {
+    const installedVersion = localStorage.getItem('installed-app-version');
+    
+    if (!installedVersion) {
+      // Primera vez que se ejecuta la app, marcar versión actual como instalada
+      console.log('🆕 Primera ejecución, marcando versión actual como instalada:', this.currentVersion);
+      localStorage.setItem('installed-app-version', this.currentVersion);
+    } else if (installedVersion !== this.currentVersion) {
+      // La versión del código es diferente a la instalada
+      // Esto puede pasar después de una actualización exitosa
+      console.log('🔄 Versión del código actualizada:', {
+        instalada: installedVersion,
+        codigo: this.currentVersion
+      });
+      
+      // Actualizar la versión instalada a la del código actual
+      localStorage.setItem('installed-app-version', this.currentVersion);
+      
+      // Notificar que se completó una actualización
+      setTimeout(() => {
+        this.notifyListeners({
+          type: 'update-completed',
+          previousVersion: installedVersion,
+          currentVersion: this.currentVersion
+        });
+      }, 1000);
+    }
   }
 
   // Agregar listener para cambios de estado
@@ -143,7 +177,11 @@ class UpdateService {
     try {
       const platform = Capacitor.getPlatform();
       console.log(`🔍 Verificando actualizaciones para ${platform}...`);
-      console.log(`📱 Versión actual: ${this.currentVersion}`);
+      
+      // Obtener versión instalada (puede ser diferente a la del package.json)
+      const installedVersion = localStorage.getItem('installed-app-version') || this.currentVersion;
+      console.log(`📱 Versión instalada: ${installedVersion}`);
+      console.log(`📦 Versión del código: ${this.currentVersion}`);
 
       // Opción 1: Verificar desde tu propio servidor/API
       try {
@@ -152,11 +190,12 @@ class UpdateService {
           const serverVersion = await response.json();
           console.log(`🌐 Versión del servidor: ${serverVersion.version}`);
           
-          if (this.isNewerVersion(serverVersion.version, this.currentVersion)) {
+          // Comparar con la versión instalada, no con la del código
+          if (this.isNewerVersion(serverVersion.version, installedVersion)) {
             return {
               available: true,
               version: serverVersion.version,
-              currentVersion: this.currentVersion,
+              currentVersion: installedVersion,
               platform: platform,
               buildDate: serverVersion.buildDate,
               features: serverVersion.features,
@@ -179,11 +218,12 @@ class UpdateService {
             const latestVersion = release.tag_name.replace('v', '');
             console.log(`🐙 GitHub versión: ${latestVersion}`);
             
-            if (this.isNewerVersion(latestVersion, this.currentVersion)) {
+            // Comparar con la versión instalada, no con la del código
+            if (this.isNewerVersion(latestVersion, installedVersion)) {
               return {
                 available: true,
                 version: latestVersion,
-                currentVersion: this.currentVersion,
+                currentVersion: installedVersion,
                 platform: platform,
                 downloadUrl: this.getMobileDownloadUrl(release),
                 releaseNotes: release.body || 'Nueva versión disponible'
@@ -361,7 +401,53 @@ class UpdateService {
   // Aplicar actualización móvil
   async applyMobileUpdate(updateInfo) {
     if (updateInfo.downloadUrl) {
-      // Abrir URL de descarga en el navegador del sistema
+      const platform = Capacitor.getPlatform();
+      
+      if (platform === 'android') {
+        try {
+          // Intentar actualización in-app primero
+          const { default: inAppUpdateService } = await import('./inAppUpdateService');
+          
+          if (inAppUpdateService.canUpdateInApp()) {
+            // Notificar que comenzó la descarga
+            this.notifyListeners({
+              type: 'download-started',
+              updateInfo
+            });
+
+            // Agregar listener para progreso
+            const progressListener = (progress) => {
+              this.notifyListeners({
+                type: 'download-progress',
+                progress: progress.progress,
+                status: progress.status
+              });
+            };
+
+            inAppUpdateService.addProgressListener(progressListener);
+
+            try {
+              await inAppUpdateService.downloadAndInstall(updateInfo.downloadUrl);
+              
+              // Actualizar versión local después de instalación exitosa
+              localStorage.setItem('app-version', updateInfo.version);
+              
+              return true;
+            } catch (inAppError) {
+              console.log('Actualización in-app falló, usando método tradicional:', inAppError);
+              // Fallback a método tradicional
+              await inAppUpdateService.openDownloadUrl(updateInfo.downloadUrl);
+              return true;
+            } finally {
+              inAppUpdateService.removeProgressListener(progressListener);
+            }
+          }
+        } catch (importError) {
+          console.log('No se pudo cargar servicio in-app:', importError);
+        }
+      }
+      
+      // Método tradicional para iOS o si falla in-app
       window.open(updateInfo.downloadUrl, '_system');
       return true;
     }

@@ -52,7 +52,13 @@ try {
       "Auto-actualización mejorada",
       "Validaciones de formularios",
       "Eliminación de ventas corregida"
-    ]
+    ],
+    releaseNotes: `Nueva versión ${newVersion} con mejoras y correcciones`,
+    downloads: {
+      android: `https://github.com/LautaroBravo08/namustock-app/releases/download/v${newVersion}/app-release.apk`,
+      ios: `https://github.com/LautaroBravo08/namustock-app/releases/download/v${newVersion}/app-release.ipa`
+    },
+    baseUrl: "https://github.com/LautaroBravo08/namustock-app"
   };
   
   // Actualizar package.json

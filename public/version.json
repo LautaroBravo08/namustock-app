@@ -1,16 +1,17 @@
 {
-  "version": "1.0.10",
-  "buildDate": "2025-07-22T10:44:04.310Z",
+  "version": "1.0.18",
+  "buildDate": "2025-07-23T00:45:00.000Z",
   "platform": "android",
   "features": [
-    "Mejoras en el sistema de actualizaciones",
-    "Corrección de errores menores",
-    "Optimizaciones de rendimiento para Android"
+    "APK firmado para instalación correcta",
+    "Sistema de actualizaciones mejorado",
+    "Corrección del loop infinito de actualizaciones",
+    "Optimizaciones de rendimiento"
   ],
-  "releaseNotes": "Nueva versión 1.0.10 con mejoras importantes para Android",
+  "releaseNotes": "Nueva versión 1.0.18 con APK firmado y sistema de actualizaciones corregido",
   "downloads": {
-    "android": "/downloads/app-release-1.0.10.apk",
-    "ios": "/downloads/app-release-1.0.10.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.18/app-release.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.18/app-release.ipa"
   },
-  "baseUrl": "https://tu-dominio.com"
+  "baseUrl": "https://github.com/LautaroBravo08/namustock-app"
 }

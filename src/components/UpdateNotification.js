@@ -7,14 +7,38 @@ const UpdateNotification = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [updateStatus, setUpdateStatus] = useState('idle'); // idle, downloading, installing, completed, error
 
   useEffect(() => {
     const handleUpdateAvailable = (data) => {
       if (data.type === 'update-available') {
         setUpdateInfo(data.updateInfo);
         setIsVisible(true);
+        setUpdateStatus('idle');
+      } else if (data.type === 'download-started') {
+        setUpdateStatus('downloading');
+        setDownloadProgress(0);
       } else if (data.type === 'download-progress') {
-        setDownloadProgress(data.progress);
+        setDownloadProgress(data.progress || 0);
+        if (data.status === 'downloading') {
+          setUpdateStatus('downloading');
+        } else if (data.status === 'installing') {
+          setUpdateStatus('installing');
+        } else if (data.status === 'completed') {
+          setUpdateStatus('completed');
+          // Ocultar notificación después de completar
+          setTimeout(() => {
+            setIsVisible(false);
+            setUpdateInfo(null);
+            setUpdateStatus('idle');
+          }, 2000);
+        } else if (data.status === 'error') {
+          setUpdateStatus('error');
+        }
+      } else if (data.type === 'update-completed') {
+        // Mostrar notificación de actualización completada exitosamente
+        console.log('🎉 Actualización completada:', data);
+        // Opcional: mostrar un toast o notificación de éxito
       }
     };
 
@@ -136,12 +160,44 @@ const UpdateNotification = () => {
             </div>
           )}
 
-          {downloadProgress > 0 && downloadProgress < 100 && (
-            <div className="w-full bg-[var(--color-bg)] rounded-full h-2">
-              <div
-                className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-300"
-                style={{ width: `${downloadProgress}%` }}
-              ></div>
+          {/* Mostrar progreso y estado */}
+          {updateStatus === 'downloading' && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-[var(--color-text-secondary)]">
+                <span>Descargando...</span>
+                <span>{downloadProgress}%</span>
+              </div>
+              <div className="w-full bg-[var(--color-bg)] rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${downloadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {updateStatus === 'installing' && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Instalando actualización...</span>
+              </div>
+              <div className="w-full bg-[var(--color-bg)] rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full w-full"></div>
+              </div>
+            </div>
+          )}
+
+          {updateStatus === 'completed' && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <Download className="h-3 w-3" />
+              <span>¡Actualización completada!</span>
+            </div>
+          )}
+
+          {updateStatus === 'error' && (
+            <div className="text-xs text-red-500">
+              Error durante la actualización. Intenta de nuevo.
             </div>
           )}
         </div>
