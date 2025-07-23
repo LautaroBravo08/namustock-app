@@ -325,56 +325,12 @@ class UpdateService {
     return false;
   }
 
-  // Aplicar actualización móvil
+  // Aplicar actualización móvil - SIMPLIFICADO
   async applyMobileUpdate(updateInfo) {
     if (updateInfo.downloadUrl) {
-      const platform = Capacitor.getPlatform();
+      console.log('📱 Abriendo URL de descarga:', updateInfo.downloadUrl);
       
-      if (platform === 'android') {
-        try {
-          // Intentar actualización in-app primero
-          const { default: inAppUpdateService } = await import('./inAppUpdateService');
-          
-          if (inAppUpdateService.canUpdateInApp()) {
-            // Notificar que comenzó la descarga
-            this.notifyListeners({
-              type: 'download-started',
-              updateInfo
-            });
-
-            // Agregar listener para progreso
-            const progressListener = (progress) => {
-              this.notifyListeners({
-                type: 'download-progress',
-                progress: progress.progress,
-                status: progress.status
-              });
-            };
-
-            inAppUpdateService.addProgressListener(progressListener);
-
-            try {
-              await inAppUpdateService.downloadAndInstall(updateInfo.downloadUrl);
-              
-              // Actualizar versión local después de instalación exitosa
-              localStorage.setItem('app-version', updateInfo.version);
-              
-              return true;
-            } catch (inAppError) {
-              console.log('Actualización in-app falló, usando método tradicional:', inAppError);
-              // Fallback a método tradicional
-              await inAppUpdateService.openDownloadUrl(updateInfo.downloadUrl);
-              return true;
-            } finally {
-              inAppUpdateService.removeProgressListener(progressListener);
-            }
-          }
-        } catch (importError) {
-          console.log('No se pudo cargar servicio in-app:', importError);
-        }
-      }
-      
-      // Método tradicional para iOS o si falla in-app
+      // SOLO método tradicional - abrir en navegador del sistema
       window.open(updateInfo.downloadUrl, '_system');
       return true;
     }
