@@ -8,10 +8,10 @@ class UpdateService {
     this.updateCheckInterval = parseInt(process.env.REACT_APP_UPDATE_CHECK_INTERVAL) || 300000; // 5 minutos por defecto
     this.isChecking = false;
     this.listeners = [];
-    
+
     // Inicializar versión instalada
     this.initializeInstalledVersion();
-    
+
     // Log de inicialización
     console.log('🚀 UpdateService inicializado:', {
       currentVersion: this.currentVersion,
@@ -23,40 +23,26 @@ class UpdateService {
     });
   }
 
-  // Obtener versión actual desde múltiples fuentes
+  // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
-    // 1. Intentar desde process.env (debería funcionar)
-    if (process.env.REACT_APP_VERSION && process.env.REACT_APP_VERSION !== '1.0.0') {
-      console.log('📦 Usando versión desde process.env:', process.env.REACT_APP_VERSION);
-      return process.env.REACT_APP_VERSION;
-    }
+    // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
+    const hardcodedVersion = '1.0.28'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
-    // 2. Intentar desde version.json (si está disponible)
-    try {
-      const versionResponse = fetch('/version.json');
-      if (versionResponse) {
-        console.log('📦 Intentando obtener versión desde version.json...');
-        // Esta será asíncrona, pero al menos intentamos
-      }
-    } catch (error) {
-      console.log('⚠️ No se pudo obtener versión desde version.json');
-    }
+    console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
+    console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
     
-    // 3. Fallback hardcodeado (actualizar manualmente)
-    const fallbackVersion = '1.0.27'; // Actualizar esta línea en cada release
-    console.log('📦 Usando versión fallback hardcodeada:', fallbackVersion);
-    return fallbackVersion;
+    return hardcodedVersion;
   }
 
   // Inicializar versión instalada - SIMPLIFICADO
   initializeInstalledVersion() {
     console.log('🚀 Inicializando sistema de versiones...');
-    
+
     // Limpiar TODOS los datos de versiones anteriores
     localStorage.removeItem('installed-app-version');
     localStorage.removeItem('last-checked-version');
     localStorage.removeItem('app-version');
-    
+
     console.log('✅ Sistema de versiones limpio. Versión actual:', this.currentVersion);
   }
 
@@ -89,7 +75,7 @@ class UpdateService {
   // Verificar si hay actualizaciones disponibles
   async checkForUpdates() {
     if (this.isChecking) return null;
-    
+
     this.isChecking = true;
     const platform = this.getPlatform();
 
@@ -120,10 +106,10 @@ class UpdateService {
       const response = await fetch('/version.json?' + Date.now());
       if (response.ok) {
         const serverVersion = await response.json();
-        
+
         // Obtener versión actual desde localStorage o usar la por defecto
         const currentVersion = localStorage.getItem('app-version') || this.currentVersion;
-        
+
         if (this.isNewerVersion(serverVersion.version, currentVersion)) {
           return {
             available: true,
@@ -143,7 +129,7 @@ class UpdateService {
         if (registration) {
           // Forzar verificación de actualización
           await registration.update();
-          
+
           // Verificar si hay una nueva versión esperando
           if (registration.waiting) {
             return {
@@ -158,7 +144,7 @@ class UpdateService {
     } catch (error) {
       console.log('Web update check failed:', error);
     }
-    
+
     return { available: false, platform: 'web' };
   }
 
@@ -177,7 +163,7 @@ class UpdateService {
     } catch (error) {
       console.log('Electron update check failed:', error);
     }
-    
+
     return { available: false, platform: 'electron' };
   }
 
@@ -204,13 +190,13 @@ class UpdateService {
       const release = await response.json();
       const latestVersion = release.tag_name.replace('v', '');
       console.log(`🐙 Última versión en GitHub: ${latestVersion}`);
-      
+
       // Comparar SOLO con la versión actual del código
       console.log(`🔍 COMPARANDO VERSIONES:`);
       console.log(`   GitHub: "${latestVersion}"`);
       console.log(`   Actual: "${this.currentVersion}"`);
       console.log(`   ¿Es más nueva?: ${this.isNewerVersion(latestVersion, this.currentVersion)}`);
-      
+
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
         console.log(`✅ Nueva versión disponible: ${latestVersion}`);
         return {
@@ -245,7 +231,7 @@ class UpdateService {
       }
       return false;
     });
-    
+
     return asset ? asset.browser_download_url : null;
   }
 
@@ -253,15 +239,15 @@ class UpdateService {
   isNewerVersion(newVersion, currentVersion) {
     const newParts = newVersion.split('.').map(Number);
     const currentParts = currentVersion.split('.').map(Number);
-    
+
     for (let i = 0; i < Math.max(newParts.length, currentParts.length); i++) {
       const newPart = newParts[i] || 0;
       const currentPart = currentParts[i] || 0;
-      
+
       if (newPart > currentPart) return true;
       if (newPart < currentPart) return false;
     }
-    
+
     return false;
   }
 
@@ -296,7 +282,7 @@ class UpdateService {
           const registration = await navigator.serviceWorker.getRegistration();
           if (registration && registration.waiting) {
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            
+
             // Esperar a que se active y luego recargar
             return new Promise((resolve) => {
               const handleMessage = (event) => {
@@ -310,9 +296,9 @@ class UpdateService {
                   resolve(true);
                 }
               };
-              
+
               navigator.serviceWorker.addEventListener('message', handleMessage);
-              
+
               // Timeout de seguridad
               setTimeout(() => {
                 navigator.serviceWorker.removeEventListener('message', handleMessage);
@@ -327,7 +313,7 @@ class UpdateService {
         if (updateInfo.version) {
           localStorage.setItem('app-version', updateInfo.version);
         }
-        
+
         // Limpiar cache del navegador
         if ('caches' in window) {
           const cacheNames = await caches.keys();
@@ -335,7 +321,7 @@ class UpdateService {
             cacheNames.map(cacheName => caches.delete(cacheName))
           );
         }
-        
+
         // Recargar la página para obtener la nueva versión
         window.location.reload(true);
         return true;
@@ -361,7 +347,7 @@ class UpdateService {
   async applyMobileUpdate(updateInfo) {
     if (updateInfo.downloadUrl) {
       console.log('📱 Abriendo URL de descarga:', updateInfo.downloadUrl);
-      
+
       // SOLO método tradicional - abrir en navegador del sistema
       window.open(updateInfo.downloadUrl, '_system');
       return true;
@@ -372,7 +358,7 @@ class UpdateService {
   // Iniciar verificación automática
   startAutoCheck() {
     this.stopAutoCheck(); // Detener cualquier verificación anterior
-    
+
     this.autoCheckInterval = setInterval(async () => {
       const updateInfo = await this.checkForUpdates();
       if (updateInfo && updateInfo.available) {
