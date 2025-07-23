@@ -1,6 +1,6 @@
 {
-  "version": "1.0.25",
-  "buildDate": "2025-07-23T03:18:58.263Z",
+  "version": "1.0.26",
+  "buildDate": "2025-07-23T04:00:26.168Z",
   "platform": "android",
   "features": [
     "Sistema de inventario completo",
@@ -11,10 +11,10 @@
     "Validaciones de formularios",
     "Eliminación de ventas corregida"
   ],
-  "releaseNotes": "Nueva versión 1.0.25 con mejoras y correcciones",
+  "releaseNotes": "Nueva versión 1.0.26 con mejoras y correcciones",
   "downloads": {
-    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.25/app-release.apk",
-    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.25/app-release.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.26/app-release.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.26/app-release.ipa"
   },
   "baseUrl": "https://github.com/LautaroBravo08/namustock-app"
 }
