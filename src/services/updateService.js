@@ -179,6 +179,11 @@ class UpdateService {
       console.log(`🐙 Última versión en GitHub: ${latestVersion}`);
       
       // Comparar SOLO con la versión actual del código
+      console.log(`🔍 COMPARANDO VERSIONES:`);
+      console.log(`   GitHub: "${latestVersion}"`);
+      console.log(`   Actual: "${this.currentVersion}"`);
+      console.log(`   ¿Es más nueva?: ${this.isNewerVersion(latestVersion, this.currentVersion)}`);
+      
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
         console.log(`✅ Nueva versión disponible: ${latestVersion}`);
         return {
