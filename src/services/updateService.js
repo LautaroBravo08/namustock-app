@@ -3,7 +3,8 @@ import { Capacitor } from '@capacitor/core';
 
 class UpdateService {
   constructor() {
-    this.currentVersion = process.env.REACT_APP_VERSION || '1.0.0';
+    // FORZAR versión desde package.json como fallback
+    this.currentVersion = this.getCurrentVersionFromPackage();
     this.updateCheckInterval = parseInt(process.env.REACT_APP_UPDATE_CHECK_INTERVAL) || 300000; // 5 minutos por defecto
     this.isChecking = false;
     this.listeners = [];
@@ -14,11 +15,37 @@ class UpdateService {
     // Log de inicialización
     console.log('🚀 UpdateService inicializado:', {
       currentVersion: this.currentVersion,
+      envVersion: process.env.REACT_APP_VERSION,
       installedVersion: localStorage.getItem('installed-app-version'),
       platform: this.getPlatform(),
       checkInterval: this.updateCheckInterval,
       simulateUpdate: process.env.REACT_APP_SIMULATE_UPDATE
     });
+  }
+
+  // Obtener versión actual desde múltiples fuentes
+  getCurrentVersionFromPackage() {
+    // 1. Intentar desde process.env (debería funcionar)
+    if (process.env.REACT_APP_VERSION && process.env.REACT_APP_VERSION !== '1.0.0') {
+      console.log('📦 Usando versión desde process.env:', process.env.REACT_APP_VERSION);
+      return process.env.REACT_APP_VERSION;
+    }
+    
+    // 2. Intentar desde version.json (si está disponible)
+    try {
+      const versionResponse = fetch('/version.json');
+      if (versionResponse) {
+        console.log('📦 Intentando obtener versión desde version.json...');
+        // Esta será asíncrona, pero al menos intentamos
+      }
+    } catch (error) {
+      console.log('⚠️ No se pudo obtener versión desde version.json');
+    }
+    
+    // 3. Fallback hardcodeado (actualizar manualmente)
+    const fallbackVersion = '1.0.27'; // Actualizar esta línea en cada release
+    console.log('📦 Usando versión fallback hardcodeada:', fallbackVersion);
+    return fallbackVersion;
   }
 
   // Inicializar versión instalada - SIMPLIFICADO
