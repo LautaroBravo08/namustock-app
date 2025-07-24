@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.47'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.51'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -371,7 +371,7 @@ class UpdateService {
     return false;
   }
 
-  // Aplicar actualización móvil - CON PERMISOS EXPLÍCITOS Y SEGURIDAD MEJORADA
+  // Aplicar actualización móvil - INSTALACIÓN IN-APP DIRECTA
   async applyMobileUpdate(updateInfo) {
     if (!updateInfo.downloadUrl) {
       throw new Error('No hay URL de descarga disponible');
@@ -380,48 +380,31 @@ class UpdateService {
     const platform = Capacitor.getPlatform();
     
     try {
-      // PASO 1: Solicitar permisos explícitos antes de proceder
-      console.log('🔐 Solicitando permisos explícitos antes de la instalación...');
+      // PASO 1: Mostrar diálogo de confirmación simplificado
+      console.log('🔐 Mostrando confirmación de instalación in-app...');
       
-      const permissionResult = await this.requestExplicitInstallPermissions(updateInfo);
+      const userConfirms = await this.showInstallConfirmationDialog(updateInfo);
       
-      if (!permissionResult.granted) {
-        console.log('❌ Permisos no concedidos:', permissionResult.reason);
-        
-        // Manejar diferentes razones de rechazo
-        switch (permissionResult.reason) {
-          case 'user_denied':
-            throw new Error('Permisos rechazados por el usuario. La instalación no puede continuar.');
-          case 'critical_permission_denied':
-            throw new Error(`Permiso crítico denegado: ${permissionResult.deniedPermission}. La instalación no puede continuar.`);
-          case 'permission_error':
-            throw new Error(`Error en permisos: ${permissionResult.error}`);
-          default:
-            throw new Error('No se pudieron obtener los permisos necesarios para la instalación.');
-        }
+      if (!userConfirms) {
+        console.log('❌ Usuario canceló la instalación');
+        throw new Error('Instalación cancelada por el usuario.');
       }
       
-      console.log('✅ Permisos explícitos concedidos, procediendo con la instalación...');
+      console.log('✅ Usuario confirmó instalación, procediendo directamente...');
       
-      // PASO 2: Proceder con la instalación según la plataforma
+      // PASO 2: Proceder directamente con la instalación según la plataforma
       if (platform === 'android') {
-        // Para Android: intentar descarga in-app con seguridad mejorada
-        console.log('📱 Android detectado: iniciando descarga in-app segura con permisos verificados');
+        // Para Android: instalación in-app directa
+        console.log('📱 Android detectado: iniciando instalación in-app directa');
         
-        try {
-          return await this.downloadAndInstallAndroid(updateInfo);
-        } catch (error) {
-          console.log('🔄 Descarga in-app falló, usando navegador como fallback');
-          console.log('❌ Error:', error.message);
-          
-          // Notificar que se usará fallback
-          this.notifyListeners({
-            type: 'fallback-to-browser',
-            message: 'La descarga automática falló. Abriendo en navegador para descarga manual.'
-          });
-          
-          return await this.downloadWithBrowser(updateInfo);
-        }
+        // Notificar que se procederá con instalación in-app
+        this.notifyListeners({
+          type: 'install-in-app-starting',
+          message: 'Iniciando instalación in-app. Android puede mostrar advertencias de seguridad.'
+        });
+        
+        return await this.downloadAndInstallAndroid(updateInfo);
+        
       } else if (platform === 'ios') {
         // iOS requiere App Store o TestFlight
         console.log('🍎 iOS detectado: usando navegador para descarga');
@@ -685,95 +668,321 @@ class UpdateService {
     }
   }
 
-  // Instalar APK con verificación de permisos mejorada
+  // Instalar APK directamente - INSTALACIÓN IN-APP AGRESIVA
   async installApk(filePath, fileName) {
     try {
-      console.log('📦 Preparando instalación segura del APK:', filePath);
+      console.log('📦 Iniciando instalación in-app directa del APK:', filePath);
 
-      // PASO 1: Verificar permisos de instalación
-      const hasInstallPermission = await this.checkInstallPermission();
-      if (!hasInstallPermission) {
-        console.log('⚠️ Solicitando permisos de instalación...');
-        await this.requestInstallPermission();
-      }
-
-      // PASO 2: Notificar al usuario sobre la instalación segura
+      // Notificar al usuario que se iniciará la instalación
       this.notifyListeners({
         type: 'installation-started',
-        message: 'Iniciando instalación segura. APK verificado y firmado digitalmente.'
+        message: 'Iniciando instalación in-app. Android puede mostrar advertencias de seguridad.'
       });
 
-      // PASO 3: Usar nuestro plugin personalizado mejorado
-      const { registerPlugin } = await import('@capacitor/core');
-      const ApkInstaller = registerPlugin('ApkInstaller');
-      
-      // Llamar al plugin nativo con información adicional
-      const result = await ApkInstaller.installApk({
-        filePath: filePath,
-        fileName: fileName,
-        packageName: 'com.namustock.app',
-        verified: true
-      });
-
-      console.log('✅ Instalación segura iniciada:', result);
-      
-      // Notificar éxito
-      this.notifyListeners({
-        type: 'installation-started',
-        message: 'Instalación iniciada. El APK ha sido verificado como seguro.'
-      });
-
-    } catch (error) {
-      console.error('❌ Error en instalación segura:', error);
-      
-      // Fallback mejorado con más información
+      // MÉTODO 1: Intentar con FileOpener (más directo)
       try {
-        console.log('🔄 Usando método de instalación alternativo...');
+        console.log('🔄 Método 1: Usando FileOpener para instalación directa');
         
         const { FileOpener } = await import('@capacitor-community/file-opener');
+        
         await FileOpener.open({
           filePath: filePath,
           contentType: 'application/vnd.android.package-archive',
           openWithDefault: true
         });
         
+        console.log('✅ FileOpener ejecutado exitosamente');
+        
         this.notifyListeners({
           type: 'installation-started',
-          message: 'Instalación iniciada. Si Android muestra advertencia, es normal para apps no de Play Store.'
+          message: '¡Instalación iniciada! Sigue las instrucciones de Android para completar la instalación.'
         });
-      } catch (fallbackError) {
-        console.error('❌ Error en fallback:', fallbackError);
-        throw new Error('No se pudo iniciar la instalación. Intenta descargar manualmente.');
+        
+        return true;
+        
+      } catch (fileOpenerError) {
+        console.log('⚠️ FileOpener falló:', fileOpenerError);
       }
+
+      // MÉTODO 2: Usar plugin personalizado si está disponible
+      try {
+        console.log('🔄 Método 2: Intentando plugin personalizado');
+        
+        const { registerPlugin } = await import('@capacitor/core');
+        const ApkInstaller = registerPlugin('ApkInstaller');
+        
+        const result = await ApkInstaller.installApk({
+          filePath: filePath,
+          fileName: fileName,
+          packageName: 'com.namustock.app',
+          verified: true
+        });
+
+        console.log('✅ Plugin personalizado exitoso:', result);
+        
+        this.notifyListeners({
+          type: 'installation-started',
+          message: 'Instalación iniciada via plugin nativo.'
+        });
+        
+        return true;
+        
+      } catch (pluginError) {
+        console.log('⚠️ Plugin personalizado falló:', pluginError);
+      }
+
+      // MÉTODO 3: Usar Browser para abrir el APK
+      try {
+        console.log('🔄 Método 3: Usando Browser para abrir APK');
+        
+        const { Browser } = await import('@capacitor/browser');
+        
+        await Browser.open({
+          url: filePath,
+          windowName: '_system'
+        });
+        
+        console.log('✅ Browser abrió el APK');
+        
+        this.notifyListeners({
+          type: 'installation-started',
+          message: 'APK abierto para instalación. Sigue las instrucciones de Android.'
+        });
+        
+        return true;
+        
+      } catch (browserError) {
+        console.log('⚠️ Browser falló:', browserError);
+      }
+
+      // MÉTODO 4: Usar App para abrir el archivo
+      try {
+        console.log('🔄 Método 4: Usando App.openUrl');
+        
+        const { App } = await import('@capacitor/app');
+        
+        await App.openUrl({ url: filePath });
+        
+        console.log('✅ App.openUrl ejecutado');
+        
+        this.notifyListeners({
+          type: 'installation-started',
+          message: 'Archivo APK abierto. Android debería mostrar el instalador.'
+        });
+        
+        return true;
+        
+      } catch (appError) {
+        console.log('⚠️ App.openUrl falló:', appError);
+      }
+
+      // MÉTODO 5: Fallback final - usar window.open
+      try {
+        console.log('🔄 Método 5: Fallback con window.open');
+        
+        window.open(filePath, '_system');
+        
+        this.notifyListeners({
+          type: 'installation-started',
+          message: 'Instalación iniciada. Si no se abre automáticamente, busca el archivo en Descargas.'
+        });
+        
+        return true;
+        
+      } catch (windowError) {
+        console.log('⚠️ window.open falló:', windowError);
+      }
+
+      // Si todos los métodos fallan
+      throw new Error('No se pudo iniciar la instalación con ningún método disponible');
+
+    } catch (error) {
+      console.error('❌ Error en instalación in-app:', error);
+      
+      this.notifyListeners({
+        type: 'installation-error',
+        message: `Error en instalación: ${error.message}. Intenta descargar manualmente.`
+      });
+      
+      throw error;
     }
   }
 
-  // Verificar permisos de instalación
+  // Verificar permisos de instalación usando Capacitor
   async checkInstallPermission() {
     try {
-      // En Android 8.0+ se requiere permiso especial
-      if (window.AndroidPermissions) {
-        return await window.AndroidPermissions.hasPermission('android.permission.REQUEST_INSTALL_PACKAGES');
+      const platform = Capacitor.getPlatform();
+      if (platform !== 'android') {
+        return true; // No Android, no necesita este permiso
       }
-      return true; // Asumir que tiene permisos en versiones anteriores
+
+      // Intentar usar el plugin de permisos de Capacitor
+      try {
+        const { Permissions } = await import('@capacitor/permissions');
+        
+        // Verificar si el permiso está disponible
+        const result = await Permissions.query({ name: 'camera' }); // Usar camera como proxy
+        console.log('📱 Capacitor Permissions disponible:', result);
+        
+        // Para Android 8.0+, necesitamos REQUEST_INSTALL_PACKAGES
+        // Como Capacitor no tiene este permiso específico, asumimos que necesita ser solicitado
+        return false; // Siempre solicitar para asegurar
+        
+      } catch (capacitorError) {
+        console.log('⚠️ Capacitor Permissions no disponible:', capacitorError);
+        
+        // Fallback: verificar usando método nativo si está disponible
+        if (window.AndroidPermissions) {
+          return await window.AndroidPermissions.hasPermission('android.permission.REQUEST_INSTALL_PACKAGES');
+        }
+        
+        // Si no hay forma de verificar, asumir que necesita permisos
+        return false;
+      }
     } catch (error) {
       console.log('⚠️ No se pudo verificar permisos:', error);
-      return true;
+      return false; // Ser conservador y solicitar permisos
     }
   }
 
-  // Solicitar permisos de instalación
+  // Solicitar permisos de instalación usando métodos nativos
   async requestInstallPermission() {
     try {
+      const platform = Capacitor.getPlatform();
+      if (platform !== 'android') {
+        return true; // No Android, no necesita este permiso
+      }
+
+      console.log('🔐 Solicitando permiso de instalación de Android...');
+
+      // MÉTODO 1: Usar plugin nativo personalizado si está disponible
+      try {
+        const { registerPlugin } = await import('@capacitor/core');
+        const AndroidPermissions = registerPlugin('AndroidPermissions');
+        
+        const result = await AndroidPermissions.requestInstallPermission();
+        console.log('✅ Permiso de instalación solicitado via plugin:', result);
+        return result.granted || result.hasPermission;
+        
+      } catch (pluginError) {
+        console.log('⚠️ Plugin AndroidPermissions no disponible:', pluginError);
+      }
+
+      // MÉTODO 2: Usar window.AndroidPermissions si está disponible
       if (window.AndroidPermissions) {
         const result = await window.AndroidPermissions.requestPermission('android.permission.REQUEST_INSTALL_PACKAGES');
+        console.log('✅ Permiso solicitado via window.AndroidPermissions:', result);
         return result.hasPermission;
       }
-      return true;
+
+      // MÉTODO 3: Usar App plugin para abrir configuración de permisos
+      try {
+        const { App } = await import('@capacitor/app');
+        
+        // Mostrar diálogo explicativo
+        const userWantsToOpenSettings = window.confirm(
+          'Para instalar actualizaciones, necesitas habilitar "Instalar aplicaciones desconocidas" en la configuración.\n\n' +
+          '¿Quieres abrir la configuración ahora?'
+        );
+        
+        if (userWantsToOpenSettings) {
+          // Intentar abrir configuración de la app
+          await App.openUrl({ 
+            url: 'android-app://com.android.settings/.Settings$ManageAppExternalSourcesActivity' 
+          });
+          
+          // Dar tiempo al usuario para cambiar la configuración
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              const confirmed = window.confirm(
+                '¿Has habilitado "Instalar aplicaciones desconocidas" para NamuStock?\n\n' +
+                'Presiona OK si ya lo habilitaste, o Cancelar para intentar más tarde.'
+              );
+              resolve(confirmed);
+            }, 3000);
+          });
+        }
+        
+        return false;
+        
+      } catch (appError) {
+        console.log('⚠️ No se pudo abrir configuración:', appError);
+      }
+
+      // MÉTODO 4: Fallback - asumir que el usuario puede manejar manualmente
+      const userConfirms = window.confirm(
+        'Para instalar la actualización, Android puede mostrar una advertencia de seguridad.\n\n' +
+        'Esto es normal para aplicaciones que no vienen de Google Play Store.\n\n' +
+        '¿Quieres continuar con la instalación?'
+      );
+      
+      return userConfirms;
+      
     } catch (error) {
-      console.log('⚠️ No se pudo solicitar permisos:', error);
-      return true;
+      console.error('❌ Error solicitando permisos de instalación:', error);
+      
+      // Último recurso: preguntar al usuario
+      const userWantsToContinue = window.confirm(
+        'No se pudieron solicitar permisos automáticamente.\n\n' +
+        'Android puede mostrar advertencias de seguridad durante la instalación.\n\n' +
+        '¿Quieres continuar de todas formas?'
+      );
+      
+      return userWantsToContinue;
     }
+  }
+
+  // Mostrar diálogo de confirmación de instalación in-app
+  async showInstallConfirmationDialog(updateInfo) {
+    return new Promise((resolve) => {
+      console.log('📋 Mostrando diálogo de confirmación de instalación...');
+      
+      // Crear información para el diálogo de confirmación
+      const confirmationInfo = {
+        type: 'install-confirmation-dialog',
+        title: 'Instalar actualización in-app',
+        message: `¿Quieres instalar NamuStock v${updateInfo.version} directamente en la aplicación?`,
+        details: [
+          '✅ Instalación directa sin salir de la app',
+          '⚠️ Android puede mostrar advertencias de seguridad',
+          '🔒 Esto es normal para apps que no vienen de Google Play Store',
+          '📱 La app se descargará e instalará automáticamente'
+        ],
+        updateInfo: updateInfo,
+        actions: [
+          {
+            text: 'Instalar in-app',
+            action: 'install',
+            primary: true
+          },
+          {
+            text: 'Cancelar',
+            action: 'cancel',
+            primary: false
+          }
+        ]
+      };
+      
+      // Notificar a la UI para mostrar el diálogo
+      this.notifyListeners(confirmationInfo);
+      
+      // Configurar listener temporal para la respuesta
+      const handleResponse = (response) => {
+        if (response.type === 'install-confirmation-response') {
+          this.removeListener(handleResponse);
+          resolve(response.action === 'install');
+        }
+      };
+      
+      this.addListener(handleResponse);
+      
+      // Timeout de seguridad (30 segundos)
+      setTimeout(() => {
+        this.removeListener(handleResponse);
+        console.log('⏰ Timeout en diálogo de confirmación');
+        resolve(false);
+      }, 30000);
+    });
   }
 
   // Solicitar permisos explícitos antes de la instalación
@@ -810,76 +1019,29 @@ class UpdateService {
     }
   }
 
-  // Solicitar permisos explícitos para Android
+  // Solicitar permisos explícitos para Android - SIMPLIFICADO Y FUNCIONAL
   async requestAndroidExplicitPermissions(updateInfo) {
     try {
       console.log('📱 Solicitando permisos específicos de Android...');
       
-      const permissionsToRequest = [];
-      const permissionResults = {};
-      
-      // 1. Permiso para instalar aplicaciones de fuentes desconocidas
-      console.log('🔐 Verificando permiso de instalación...');
-      
-      const hasInstallPermission = await this.checkInstallPermission();
-      if (!hasInstallPermission) {
-        permissionsToRequest.push({
+      // Mostrar diálogo explicativo al usuario PRIMERO
+      const userConsent = await this.showPermissionExplanationDialog([
+        {
           permission: 'android.permission.REQUEST_INSTALL_PACKAGES',
           name: 'Instalar aplicaciones',
-          description: 'Necesario para instalar la actualización de NamuStock',
+          description: 'Permite instalar la actualización directamente en la app',
           critical: true
-        });
-      }
-      
-      // 2. Permiso para acceder al almacenamiento (si es necesario)
-      console.log('📁 Verificando permisos de almacenamiento...');
-      
-      try {
-        const { Filesystem, Directory } = await import('@capacitor/filesystem');
-        
-        // Intentar crear directorio de prueba
-        await Filesystem.mkdir({
-          path: 'downloads',
-          directory: Directory.Cache,
-          recursive: true
-        });
-        
-        console.log('✅ Permisos de almacenamiento OK');
-      } catch (storageError) {
-        console.log('⚠️ Posible problema con almacenamiento:', storageError);
-        permissionsToRequest.push({
-          permission: 'android.permission.WRITE_EXTERNAL_STORAGE',
+        },
+        {
+          permission: 'storage',
           name: 'Acceso al almacenamiento',
-          description: 'Necesario para descargar la actualización',
-          critical: false
-        });
-      }
-      
-      // 3. Permiso para acceso a internet (generalmente ya concedido)
-      permissionsToRequest.push({
-        permission: 'android.permission.INTERNET',
-        name: 'Acceso a internet',
-        description: 'Necesario para descargar la actualización desde GitHub',
-        critical: true
-      });
-      
-      // Si no hay permisos que solicitar, continuar
-      if (permissionsToRequest.length === 0) {
-        console.log('✅ Todos los permisos ya están concedidos');
-        
-        this.notifyListeners({
-          type: 'permissions-granted',
-          message: 'Todos los permisos necesarios ya están concedidos'
-        });
-        
-        return { granted: true, permissions: [] };
-      }
-      
-      // Mostrar diálogo explicativo al usuario
-      const userConsent = await this.showPermissionExplanationDialog(permissionsToRequest, updateInfo);
+          description: 'Para descargar y guardar temporalmente la actualización',
+          critical: true
+        }
+      ], updateInfo);
       
       if (!userConsent) {
-        console.log('❌ Usuario rechazó los permisos');
+        console.log('❌ Usuario rechazó los permisos en el diálogo');
         
         this.notifyListeners({
           type: 'permissions-denied',
@@ -889,131 +1051,87 @@ class UpdateService {
         return { granted: false, reason: 'user_denied' };
       }
       
-      // Solicitar cada permiso individualmente
-      console.log('🔐 Solicitando permisos uno por uno...');
+      console.log('✅ Usuario aceptó conceder permisos, procediendo...');
       
-      for (const permissionInfo of permissionsToRequest) {
-        try {
-          console.log(`🔐 Solicitando: ${permissionInfo.name}`);
-          
-          this.notifyListeners({
-            type: 'permission-requesting',
-            message: `Solicitando permiso: ${permissionInfo.name}`,
-            permission: permissionInfo
-          });
-          
-          let granted = false;
-          
-          if (permissionInfo.permission === 'android.permission.REQUEST_INSTALL_PACKAGES') {
-            // Permiso especial de instalación
-            granted = await this.requestInstallPermission();
-          } else if (window.AndroidPermissions) {
-            // Otros permisos usando plugin de permisos
-            const result = await window.AndroidPermissions.requestPermission(permissionInfo.permission);
-            granted = result.hasPermission;
-          } else {
-            // Fallback: asumir concedido si no hay plugin
-            granted = true;
-          }
-          
-          permissionResults[permissionInfo.permission] = {
-            granted: granted,
-            name: permissionInfo.name,
-            critical: permissionInfo.critical
-          };
-          
-          if (granted) {
-            console.log(`✅ Permiso concedido: ${permissionInfo.name}`);
-            
-            this.notifyListeners({
-              type: 'permission-granted',
-              message: `Permiso concedido: ${permissionInfo.name}`,
-              permission: permissionInfo
-            });
-          } else {
-            console.log(`❌ Permiso denegado: ${permissionInfo.name}`);
-            
-            this.notifyListeners({
-              type: 'permission-denied',
-              message: `Permiso denegado: ${permissionInfo.name}`,
-              permission: permissionInfo
-            });
-            
-            // Si es un permiso crítico y fue denegado, fallar
-            if (permissionInfo.critical) {
-              return { 
-                granted: false, 
-                reason: 'critical_permission_denied',
-                deniedPermission: permissionInfo.name,
-                permissions: permissionResults
-              };
-            }
-          }
-          
-        } catch (permissionError) {
-          console.error(`❌ Error solicitando permiso ${permissionInfo.name}:`, permissionError);
-          
-          permissionResults[permissionInfo.permission] = {
-            granted: false,
-            name: permissionInfo.name,
-            critical: permissionInfo.critical,
-            error: permissionError.message
-          };
-          
-          if (permissionInfo.critical) {
-            return { 
-              granted: false, 
-              reason: 'permission_error',
-              error: permissionError.message,
-              permissions: permissionResults
-            };
-          }
-        }
-      }
+      // Ahora solicitar los permisos reales del sistema
+      this.notifyListeners({
+        type: 'permission-requesting',
+        message: 'Solicitando permisos del sistema Android...'
+      });
       
-      // Verificar si todos los permisos críticos fueron concedidos
-      const criticalPermissionsDenied = Object.values(permissionResults)
-        .filter(result => result.critical && !result.granted);
+      // Solicitar permiso de instalación (el más importante)
+      const installPermissionGranted = await this.requestInstallPermission();
       
-      if (criticalPermissionsDenied.length > 0) {
-        console.log('❌ Permisos críticos denegados:', criticalPermissionsDenied);
+      if (installPermissionGranted) {
+        console.log('✅ Permisos del sistema concedidos');
         
         this.notifyListeners({
-          type: 'critical-permissions-denied',
-          message: 'Permisos críticos denegados. No se puede continuar con la instalación.',
-          deniedPermissions: criticalPermissionsDenied
+          type: 'all-permissions-granted',
+          message: 'Permisos concedidos. Procediendo con la instalación in-app.'
         });
         
         return { 
-          granted: false, 
-          reason: 'critical_permissions_denied',
-          deniedPermissions: criticalPermissionsDenied,
-          permissions: permissionResults
+          granted: true, 
+          permissions: {
+            'android.permission.REQUEST_INSTALL_PACKAGES': {
+              granted: true,
+              name: 'Instalar aplicaciones',
+              critical: true
+            }
+          }
         };
+      } else {
+        console.log('❌ Permisos del sistema denegados');
+        
+        // Ofrecer alternativa: continuar con instalación manual
+        const continueAnyway = window.confirm(
+          'No se pudieron obtener todos los permisos automáticamente.\n\n' +
+          '¿Quieres continuar con la descarga? Tendrás que instalar manualmente cuando termine.\n\n' +
+          'Android puede mostrar advertencias de seguridad, pero es normal para apps que no vienen de Google Play Store.'
+        );
+        
+        if (continueAnyway) {
+          this.notifyListeners({
+            type: 'permissions-partial',
+            message: 'Continuando con instalación manual. Android puede mostrar advertencias.'
+          });
+          
+          return { 
+            granted: true, 
+            manual: true,
+            permissions: {
+              'manual_install': {
+                granted: true,
+                name: 'Instalación manual',
+                critical: true
+              }
+            }
+          };
+        } else {
+          return { granted: false, reason: 'user_denied_system_permissions' };
+        }
       }
-      
-      console.log('✅ Todos los permisos necesarios concedidos');
-      
-      this.notifyListeners({
-        type: 'all-permissions-granted',
-        message: 'Todos los permisos necesarios han sido concedidos. Procediendo con la instalación.',
-        permissions: permissionResults
-      });
-      
-      return { 
-        granted: true, 
-        permissions: permissionResults 
-      };
       
     } catch (error) {
       console.error('❌ Error en solicitud de permisos Android:', error);
       
-      this.notifyListeners({
-        type: 'permission-request-error',
-        message: `Error solicitando permisos: ${error.message}`
-      });
+      // Ofrecer continuar de todas formas
+      const continueWithError = window.confirm(
+        'Hubo un error solicitando permisos automáticamente.\n\n' +
+        '¿Quieres continuar de todas formas? La instalación será manual.\n\n' +
+        'Error: ' + error.message
+      );
       
-      return { granted: false, error: error.message };
+      if (continueWithError) {
+        return { 
+          granted: true, 
+          manual: true,
+          error: error.message,
+          permissions: {}
+        };
+      } else {
+        return { granted: false, error: error.message };
+      }
     }
   }
 
@@ -1052,54 +1170,6 @@ class UpdateService {
       console.error('❌ Error en permisos iOS:', error);
       return { granted: false, error: error.message };
     }
-  }
-
-  // Mostrar diálogo explicativo de permisos
-  async showPermissionExplanationDialog(permissions, updateInfo) {
-    return new Promise((resolve) => {
-      console.log('📋 Mostrando diálogo explicativo de permisos...');
-      
-      // Crear información detallada para el usuario
-      const permissionInfo = {
-        type: 'permission-explanation-dialog',
-        title: 'Permisos necesarios para la actualización',
-        message: `Para instalar NamuStock v${updateInfo.version} de forma segura, necesitamos los siguientes permisos:`,
-        permissions: permissions,
-        updateInfo: updateInfo,
-        actions: [
-          {
-            text: 'Conceder permisos',
-            action: 'grant',
-            primary: true
-          },
-          {
-            text: 'Cancelar',
-            action: 'cancel',
-            primary: false
-          }
-        ]
-      };
-      
-      // Notificar a la UI para mostrar el diálogo
-      this.notifyListeners(permissionInfo);
-      
-      // Configurar listener temporal para la respuesta
-      const handleResponse = (response) => {
-        if (response.type === 'permission-dialog-response') {
-          this.removeListener(handleResponse);
-          resolve(response.action === 'grant');
-        }
-      };
-      
-      this.addListener(handleResponse);
-      
-      // Timeout de seguridad (30 segundos)
-      setTimeout(() => {
-        this.removeListener(handleResponse);
-        console.log('⏰ Timeout en diálogo de permisos');
-        resolve(false);
-      }, 30000);
-    });
   }
 
   // Mostrar diálogo específico para iOS

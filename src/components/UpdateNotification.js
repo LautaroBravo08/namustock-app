@@ -45,7 +45,11 @@ const UpdateNotification = () => {
         setUpdateStatus('error');
         setDownloadMessage(data.message || 'Error durante la actualización');
       } else if (data.type === 'permission-explanation-dialog') {
-        // Mostrar diálogo de permisos
+        // Mostrar diálogo de permisos (legacy)
+        setPermissionDialog(data);
+        setIsPermissionDialogVisible(true);
+      } else if (data.type === 'install-confirmation-dialog') {
+        // Mostrar diálogo de confirmación de instalación in-app
         setPermissionDialog(data);
         setIsPermissionDialogVisible(true);
       } else if (data.type === 'ios-update-dialog') {
@@ -118,12 +122,28 @@ const UpdateNotification = () => {
     }
   };
 
-  // Manejar respuesta del diálogo de permisos
+  // Manejar respuesta del diálogo de permisos/confirmación
   const handlePermissionResponse = (action) => {
     if (permissionDialog) {
+      // Determinar el tipo de respuesta según el diálogo
+      let responseType;
+      switch (permissionDialog.type) {
+        case 'permission-explanation-dialog':
+          responseType = 'permission-dialog-response';
+          break;
+        case 'install-confirmation-dialog':
+          responseType = 'install-confirmation-response';
+          break;
+        case 'ios-update-dialog':
+          responseType = 'ios-dialog-response';
+          break;
+        default:
+          responseType = 'permission-dialog-response';
+      }
+      
       // Enviar respuesta al servicio de actualizaciones
       updateService.notifyListeners({
-        type: permissionDialog.type === 'permission-explanation-dialog' ? 'permission-dialog-response' : 'ios-dialog-response',
+        type: responseType,
         action: action
       });
     }
@@ -182,7 +202,25 @@ const UpdateNotification = () => {
               {permissionDialog.message}
             </p>
 
-            {permissionDialog.permissions && permissionDialog.permissions.length > 0 && (
+            {/* Mostrar detalles para diálogo de confirmación de instalación */}
+            {permissionDialog.type === 'install-confirmation-dialog' && permissionDialog.details && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  {permissionDialog.details.map((detail, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex-1">
+                        <p className="text-sm text-[var(--color-text-primary)]">
+                          {detail}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mostrar permisos para diálogo de permisos legacy */}
+            {permissionDialog.type === 'permission-explanation-dialog' && permissionDialog.permissions && permissionDialog.permissions.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-[var(--color-text-primary)]">
                   Permisos requeridos:
@@ -216,10 +254,13 @@ const UpdateNotification = () => {
               </div>
             )}
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                <strong>Seguridad:</strong> Estos permisos son necesarios para instalar la actualización de forma segura. 
-                NamuStock solo solicita permisos esenciales para su funcionamiento.
+            {/* Información de seguridad */}
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+              <p className="text-xs text-orange-700 dark:text-orange-300">
+                <strong>⚠️ Importante:</strong> {permissionDialog.type === 'install-confirmation-dialog' 
+                  ? 'Android mostrará advertencias porque NamuStock no viene de Google Play Store. Esto es completamente normal y seguro.'
+                  : 'Estos permisos son necesarios para instalar la actualización de forma segura. NamuStock solo solicita permisos esenciales para su funcionamiento.'
+                }
               </p>
             </div>
           </div>
@@ -232,10 +273,10 @@ const UpdateNotification = () => {
               Cancelar
             </button>
             <button
-              onClick={() => handlePermissionResponse('grant')}
+              onClick={() => handlePermissionResponse(permissionDialog.type === 'install-confirmation-dialog' ? 'install' : 'grant')}
               className="flex-1 px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-md hover:bg-[var(--color-primary-hover)] transition-colors"
             >
-              Conceder permisos
+              {permissionDialog.type === 'install-confirmation-dialog' ? 'Instalar in-app' : 'Conceder permisos'}
             </button>
           </div>
         </div>
