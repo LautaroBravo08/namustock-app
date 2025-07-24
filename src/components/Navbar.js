@@ -41,25 +41,9 @@ const Navbar = ({
     <nav className={`bg-[var(--color-bg-navbar)] backdrop-blur-lg shadow-sm sticky top-0 z-50 border-b border-[var(--color-border)] transition-shadow duration-500 ${isGlowActive ? 'dark-glow' : ''} ${'light-shadow'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-16">
-          {/* Left section - User Menu */}
+          {/* Left section - Vacío para balance */}
           <div className="flex items-center justify-self-start">
-            {user ? (
-              <UserMenu 
-                user={user}
-                onAppearanceClick={onAppearanceClick}
-                onSettingsClick={onSettingsClick}
-                onImportExportClick={onImportExportClick}
-                showNotification={showNotification}
-              />
-            ) : (
-              <button 
-                onClick={onLoginClick}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-lg font-medium hover:bg-[var(--color-primary-hover)] transition-colors text-sm"
-              >
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Iniciar Sesión</span>
-              </button>
-            )}
+            {/* Espacio vacío para balance visual */}
           </div>
 
           {/* Center section - Logo y Navegación */}
@@ -92,9 +76,25 @@ const Navbar = ({
             </div>
           </div>
 
-          {/* Right section - Vacío para balance */}
+          {/* Right section - User Menu */}
           <div className="flex items-center justify-end">
-            {/* Espacio vacío para balance visual */}
+            {user ? (
+              <UserMenu 
+                user={user}
+                onAppearanceClick={onAppearanceClick}
+                onSettingsClick={onSettingsClick}
+                onImportExportClick={onImportExportClick}
+                showNotification={showNotification}
+              />
+            ) : (
+              <button 
+                onClick={onLoginClick}
+                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-lg font-medium hover:bg-[var(--color-primary-hover)] transition-colors text-sm"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Iniciar Sesión</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
