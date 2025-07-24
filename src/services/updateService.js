@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.38'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.39'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -424,19 +424,71 @@ class UpdateService {
         message: 'Conectando al servidor...'
       });
 
-      // Descargar archivo con mejor manejo de errores
-      let response;
+      // MÉTODO 1: Intentar descarga directa con fetch
+      console.log('🔄 Método 1: Descarga directa con fetch');
+      let response = null;
+      let fetchError = null;
+      
       try {
         response = await fetch(updateInfo.downloadUrl, {
           method: 'GET',
+          mode: 'cors',
           headers: {
             'Accept': 'application/vnd.android.package-archive,application/octet-stream,*/*',
-            'User-Agent': 'NamuStock-App/1.0 (Android)'
+            'User-Agent': 'NamuStock-App/1.0 (Android)',
+            'Cache-Control': 'no-cache'
           }
         });
-      } catch (fetchError) {
-        console.error('❌ Error en fetch:', fetchError);
-        throw new Error(`Error de conexión: ${fetchError.message}`);
+        
+        if (response.ok) {
+          console.log('✅ Fetch directo exitoso');
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('❌ Fetch directo falló:', error);
+        fetchError = error;
+        response = null;
+      }
+      
+      // MÉTODO 2: Si fetch falla, usar plugin HTTP de Capacitor
+      if (!response) {
+        console.log('🔄 Método 2: Usando plugin HTTP de Capacitor');
+        try {
+          const { CapacitorHttp } = await import('@capacitor/core');
+          
+          const httpResponse = await CapacitorHttp.request({
+            url: updateInfo.downloadUrl,
+            method: 'GET',
+            headers: {
+              'Accept': 'application/vnd.android.package-archive',
+              'User-Agent': 'NamuStock-App/1.0'
+            },
+            responseType: 'blob'
+          });
+          
+          if (httpResponse.status === 200) {
+            console.log('✅ Plugin HTTP exitoso');
+            // Convertir la respuesta a formato compatible
+            response = {
+              ok: true,
+              status: httpResponse.status,
+              blob: () => Promise.resolve(httpResponse.data),
+              headers: {
+                get: (key) => httpResponse.headers[key]
+              }
+            };
+          } else {
+            throw new Error(`HTTP ${httpResponse.status}`);
+          }
+        } catch (httpError) {
+          console.error('❌ Plugin HTTP falló:', httpError);
+          
+          // MÉTODO 3: Fallback - abrir en navegador
+          console.log('🔄 Método 3: Fallback - abriendo en navegador');
+          window.open(updateInfo.downloadUrl, '_system');
+          throw new Error('Descarga abierta en navegador. Instala manualmente.');
+        }
       }
 
       if (!response.ok) {
