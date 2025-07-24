@@ -61,8 +61,8 @@ const HomePage = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <header className={`bg-[var(--color-bg-secondary)] shadow rounded-lg p-4 mb-6 border border-[var(--color-border)] ${isGlowActive ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4">
+      <header className={`bg-[var(--color-bg-secondary)] shadow rounded-lg p-3 mb-4 border border-[var(--color-border)] ${isGlowActive ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
           <div className="relative md:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--color-text-secondary)]" />
             <input 
@@ -76,9 +76,9 @@ const HomePage = ({
           
           <div className="text-center md:col-span-1">
             {cartItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-secondary)] py-4">
-                <ShoppingCart className="w-10 h-10" />
-                <p className="mt-2 font-medium">El carrito está vacío</p>
+              <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-secondary)] py-2">
+                <ShoppingCart className="w-8 h-8" />
+                <p className="mt-1 font-medium text-sm">El carrito está vacío</p>
               </div>
             ) : (
               <div className="w-full">
@@ -123,18 +123,18 @@ const HomePage = ({
           </div>
           
           <div className="flex items-center justify-end gap-2 md:col-span-1">
-            <div className="flex items-center bg-[var(--color-bg)] rounded-lg p-1 border border-[var(--color-border)]">
+            <div className="flex items-center bg-[var(--color-bg)] rounded-lg p-0.5 border border-[var(--color-border)]">
               <button 
                 onClick={() => setView('card')} 
-                className={`p-2 rounded-md ${view === 'card' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
+                className={`p-1.5 rounded-md ${view === 'card' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
               >
-                <LayoutGrid className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                <LayoutGrid className="h-4 w-4 text-[var(--color-text-secondary)]" />
               </button>
               <button 
                 onClick={() => setView('list')} 
-                className={`p-2 rounded-md ${view === 'list' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
+                className={`p-1.5 rounded-md ${view === 'list' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
               >
-                <List className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                <List className="h-4 w-4 text-[var(--color-text-secondary)]" />
               </button>
             </div>
             
@@ -142,14 +142,14 @@ const HomePage = ({
               <select 
                 onChange={(e) => setSort(e.target.value)} 
                 value={sort} 
-                className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-2 pl-3 pr-8 text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-1.5 pl-3 pr-8 text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
               >
                 <option value="alphabetical">Alfabético</option>
                 <option value="stock">Stock</option>
                 <option value="price">Precio</option>
                 <option value="category">Categoría</option>
               </select>
-              <ChevronDown className="h-5 w-5 text-[var(--color-text-secondary)] absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="h-4 w-4 text-[var(--color-text-secondary)] absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>
