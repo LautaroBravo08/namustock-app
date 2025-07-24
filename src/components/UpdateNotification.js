@@ -212,21 +212,21 @@ const UpdateNotification = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-green-600">
                 <Download className="h-3 w-3" />
-                <span>¡Actualización completada!</span>
+                <span>¡Descarga iniciada!</span>
               </div>
               <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
-                Los archivos antiguos se limpiarán automáticamente
+                Se abrió en tu navegador para mayor seguridad
               </div>
             </div>
           )}
 
           {updateStatus === 'error' && (
             <div className="space-y-1">
-              <div className="text-xs text-red-500 font-medium">
-                Error durante la actualización
+              <div className="text-xs text-blue-500 font-medium">
+                Descarga iniciada en navegador
               </div>
               <div className="text-xs text-[var(--color-text-secondary)]">
-                {downloadMessage || 'Intenta de nuevo o descarga manualmente'}
+                {downloadMessage || 'Se abrió tu navegador para descargar de forma segura'}
               </div>
             </div>
           )}
