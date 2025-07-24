@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.45'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.46'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
