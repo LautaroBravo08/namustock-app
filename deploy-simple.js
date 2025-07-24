@@ -165,7 +165,7 @@ async function main() {
       execCommand(`git tag -a ${tagName} -m "${tagMessage}"`, 'Creando tag');
       
       // Push todo
-      execCommand('git push origin main', 'Pusheando cambios');
+      execCommand('git push origin master', 'Pusheando cambios');
       execCommand(`git push origin ${tagName}`, 'Pusheando tag');
       
       logSuccess('Cambios subidos a GitHub');

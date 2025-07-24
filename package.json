@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -89,6 +89,9 @@
     "deploy:auto": "node deploy-simple.js patch",
     "deploy:auto:minor": "node deploy-simple.js minor",
     "deploy:auto:major": "node deploy-simple.js major",
+    "deploy:complete": "node deploy-auto-complete.js patch",
+    "deploy:complete:minor": "node deploy-auto-complete.js minor",
+    "deploy:complete:major": "node deploy-auto-complete.js major",
     "release:github": "node auto-deploy-github.js patch",
     "release:github:minor": "node auto-deploy-github.js minor",
     "release:github:major": "node auto-deploy-github.js major",

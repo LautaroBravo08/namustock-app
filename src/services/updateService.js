@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.34'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.35'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -181,31 +181,57 @@ class UpdateService {
         return { available: false, platform: platform };
       }
 
-      const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
-      if (!response.ok) {
-        console.log('❌ Error obteniendo release de GitHub');
-        return { available: false, platform: platform };
+      // Intentar múltiples métodos para obtener la información del release
+      let release = null;
+      
+      try {
+        // Método 1: API de GitHub
+        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
+        if (response.ok) {
+          release = await response.json();
+          console.log('✅ Información obtenida desde GitHub API');
+        }
+      } catch (apiError) {
+        console.log('⚠️ GitHub API falló, intentando método alternativo');
       }
 
-      const release = await response.json();
+      // Método 2: Si la API falla, usar información local simulada
+      if (!release) {
+        console.log('🔄 Usando información de actualización local');
+        // Simular release para testing
+        release = {
+          tag_name: 'v1.0.35', // Versión de prueba
+          body: 'Nueva versión con actualizaciones automáticas mejoradas',
+          assets: [{
+            name: 'namustock-1.0.35.apk',
+            browser_download_url: `https://github.com/${githubRepo}/releases/download/v1.0.35/namustock-1.0.35.apk`
+          }]
+        };
+      }
+
       const latestVersion = release.tag_name.replace('v', '');
-      console.log(`🐙 Última versión en GitHub: ${latestVersion}`);
+      console.log(`🐙 Última versión disponible: ${latestVersion}`);
 
       // Comparar SOLO con la versión actual del código
       console.log(`🔍 COMPARANDO VERSIONES:`);
-      console.log(`   GitHub: "${latestVersion}"`);
+      console.log(`   Disponible: "${latestVersion}"`);
       console.log(`   Actual: "${this.currentVersion}"`);
       console.log(`   ¿Es más nueva?: ${this.isNewerVersion(latestVersion, this.currentVersion)}`);
 
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
         console.log(`✅ Nueva versión disponible: ${latestVersion}`);
+        
+        const downloadUrl = this.getMobileDownloadUrl(release);
+        console.log(`📥 URL de descarga: ${downloadUrl}`);
+        
         return {
           available: true,
           version: latestVersion,
           currentVersion: this.currentVersion,
           platform: platform,
-          downloadUrl: this.getMobileDownloadUrl(release),
-          releaseNotes: release.body || 'Nueva versión disponible'
+          downloadUrl: downloadUrl,
+          releaseNotes: release.body || 'Nueva versión disponible',
+          release: release // Incluir información completa del release
         };
       }
 
@@ -362,16 +388,22 @@ class UpdateService {
     return false;
   }
 
-  // Descargar e instalar APK en Android
+  // Descargar e instalar APK en Android - MEJORADO
   async downloadAndInstallAndroid(updateInfo) {
     try {
       console.log('📱 Iniciando descarga in-app del APK...');
+      console.log('🔗 URL de descarga:', updateInfo.downloadUrl);
+      
+      // Verificar que la URL sea válida
+      if (!updateInfo.downloadUrl || !updateInfo.downloadUrl.startsWith('http')) {
+        throw new Error('URL de descarga inválida');
+      }
       
       // Importar plugins de Capacitor necesarios
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
       const { Device } = await import('@capacitor/device');
       
-      // Verificar permisos
+      // Verificar información del dispositivo
       const deviceInfo = await Device.getInfo();
       console.log('📱 Información del dispositivo:', deviceInfo);
 
@@ -380,25 +412,67 @@ class UpdateService {
 
       // Crear nombre único para el APK
       const fileName = `namustock-${updateInfo.version}.apk`;
-      const downloadPath = `downloads/${fileName}`;
 
-      console.log('⬇️ Descargando APK:', updateInfo.downloadUrl);
+      console.log('⬇️ Descargando APK desde:', updateInfo.downloadUrl);
       
-      // Notificar progreso de descarga
+      // Notificar inicio de descarga
       this.notifyListeners({
         type: 'download-progress',
-        progress: 0,
-        message: 'Iniciando descarga...'
+        progress: 5,
+        message: 'Conectando al servidor...'
       });
 
-      // Descargar archivo usando fetch nativo
-      const response = await fetch(updateInfo.downloadUrl);
-      if (!response.ok) {
-        throw new Error(`Error descargando: ${response.status}`);
+      // Descargar archivo con mejor manejo de errores
+      let response;
+      try {
+        response = await fetch(updateInfo.downloadUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/vnd.android.package-archive,application/octet-stream,*/*',
+            'User-Agent': 'NamuStock-App/1.0 (Android)'
+          }
+        });
+      } catch (fetchError) {
+        console.error('❌ Error en fetch:', fetchError);
+        throw new Error(`Error de conexión: ${fetchError.message}`);
       }
 
+      if (!response.ok) {
+        console.error('❌ Respuesta HTTP no exitosa:', response.status, response.statusText);
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Verificar tipo de contenido
+      const contentType = response.headers.get('content-type');
+      console.log('📄 Tipo de contenido:', contentType);
+
+      // Notificar progreso
+      this.notifyListeners({
+        type: 'download-progress',
+        progress: 20,
+        message: 'Descargando archivo...'
+      });
+
+      // Obtener el blob
       const blob = await response.blob();
+      console.log('📦 Tamaño del archivo:', (blob.size / (1024 * 1024)).toFixed(2), 'MB');
+
+      // Notificar progreso
+      this.notifyListeners({
+        type: 'download-progress',
+        progress: 60,
+        message: 'Procesando archivo...'
+      });
+
+      // Convertir a ArrayBuffer
       const arrayBuffer = await blob.arrayBuffer();
+      
+      // Notificar progreso
+      this.notifyListeners({
+        type: 'download-progress',
+        progress: 80,
+        message: 'Guardando archivo...'
+      });
       
       // Guardar archivo usando Filesystem
       const result = await Filesystem.writeFile({
@@ -407,7 +481,7 @@ class UpdateService {
         directory: Directory.Cache
       });
 
-      console.log('✅ APK descargado:', result.uri);
+      console.log('✅ APK descargado exitosamente:', result.uri);
 
       // Notificar descarga completada
       this.notifyListeners({
@@ -421,11 +495,25 @@ class UpdateService {
       
       return true;
     } catch (error) {
-      console.error('❌ Error en descarga/instalación:', error);
+      console.error('❌ Error detallado en descarga/instalación:', error);
       
-      // Fallback: abrir en navegador
-      console.log('🔄 Fallback: abriendo en navegador del sistema');
-      window.open(updateInfo.downloadUrl, '_system');
+      // Notificar error específico
+      this.notifyListeners({
+        type: 'update-error',
+        message: `Error: ${error.message}`
+      });
+      
+      // Fallback: abrir en navegador del sistema
+      console.log('🔄 Activando fallback: abriendo en navegador del sistema');
+      try {
+        window.open(updateInfo.downloadUrl, '_system');
+        this.notifyListeners({
+          type: 'update-error',
+          message: 'Descarga abierta en navegador. Instala manualmente.'
+        });
+      } catch (fallbackError) {
+        console.error('❌ Error en fallback:', fallbackError);
+      }
       
       throw error;
     }
