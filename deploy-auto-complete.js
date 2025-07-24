@@ -201,6 +201,7 @@ A partir de esta versión, todas las futuras actualizaciones se instalarán auto
     
     try {
       // Crear release con GitHub CLI
+      const tagName = `v${newVersion}`;
       const releaseTitle = `🚀 NamuStock v${newVersion} - Actualizaciones Automáticas`;
       const createCommand = `gh release create ${tagName} "${apkPath}" --title "${releaseTitle}" --notes-file "${notesFile}" --latest`;
       
