@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Camera } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import CameraConfirmationModal from './CameraConfirmationModal';
+import { optimizeProductImage, getImageInfo } from '../utils/imageOptimizer';
 
 const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState(null);
@@ -9,6 +10,8 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   const [uploadTargetIndex, setUploadTargetIndex] = useState(0);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [cameraTargetIndex, setCameraTargetIndex] = useState(0);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationProgress, setOptimizationProgress] = useState('');
 
   useBodyScrollLock(isOpen);
 
@@ -84,15 +87,55 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     handleImageUrlChange(cameraTargetIndex, photoDataUrl);
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      handleImageUrlChange(uploadTargetIndex, e.target.result);
-    };
-    reader.readAsDataURL(file);
+    setIsOptimizing(true);
+    setOptimizationProgress('Analizando imagen...');
+
+    try {
+      // Mostrar información de la imagen original
+      const imageInfo = await getImageInfo(file);
+      console.log('📸 Imagen original:', imageInfo);
+      
+      setOptimizationProgress(`Optimizando imagen (${imageInfo.sizeMB} MB)...`);
+
+      // Optimizar la imagen
+      const optimizedResult = await optimizeProductImage(file);
+      
+      setOptimizationProgress('Aplicando optimización...');
+      
+      // Usar la imagen optimizada
+      handleImageUrlChange(uploadTargetIndex, optimizedResult.dataUrl);
+      
+      setOptimizationProgress('¡Imagen optimizada exitosamente!');
+      
+      // Mostrar notificación de éxito
+      console.log('✅ Imagen optimizada y cargada exitosamente');
+      
+      // Limpiar estado después de un momento
+      setTimeout(() => {
+        setIsOptimizing(false);
+        setOptimizationProgress('');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('❌ Error optimizando imagen:', error);
+      setOptimizationProgress('Error optimizando, usando imagen original...');
+      
+      // Fallback: usar la imagen original si falla la optimización
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        handleImageUrlChange(uploadTargetIndex, e.target.result);
+        setTimeout(() => {
+          setIsOptimizing(false);
+          setOptimizationProgress('');
+        }, 1000);
+      };
+      reader.readAsDataURL(file);
+    }
+    
     event.target.value = '';
   };
 
@@ -201,6 +244,22 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
               <label className="block text-sm font-medium text-[var(--color-text-secondary)]">
                 URLs de Imágenes
               </label>
+              
+              {/* Indicador de optimización */}
+              {isOptimizing && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                      {optimizationProgress}
+                    </span>
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Optimizando imagen para mejor rendimiento...
+                  </div>
+                </div>
+              )}
+              
               {formData.imageUrls.map((url, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <input 
@@ -209,23 +268,31 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
                     onChange={(e) => handleImageUrlChange(index, e.target.value)} 
                     placeholder={`URL o subida de imagen ${index + 1}`} 
                     className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
+                    disabled={isOptimizing}
                   />
                   <button 
                     type="button" 
                     onClick={() => handleUploadClick(index)} 
-                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)]"
+                    disabled={isOptimizing}
+                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Subir imagen (se optimizará automáticamente)"
                   >
                     <Upload className="h-5 w-5 text-[var(--color-text-secondary)]"/>
                   </button>
                   <button 
                     type="button" 
                     onClick={() => handleCameraClick(index)} 
-                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)]"
+                    disabled={isOptimizing}
+                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Camera className="h-5 w-5 text-[var(--color-text-secondary)]"/>
                   </button>
                 </div>
               ))}
+              
+              <div className="text-xs text-[var(--color-text-secondary)] mt-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
+                <strong>✨ Optimización automática:</strong> Las imágenes se redimensionan automáticamente a 800x600px y se comprimen para mejor rendimiento sin perder calidad visual.
+              </div>
             </div>
           </div>
           

@@ -17,7 +17,7 @@ import HomePage from './pages/HomePage';
 import IAPage from './pages/IAPage';
 import RegistrosPage from './pages/RegistrosPage';
 import CartModal from './components/CartModal';
-import CartButton from './components/CartButton';
+
 import AppearanceModal from './components/AppearanceModal';
 import SettingsModal from './components/SettingsModal';
 import ImportExportModal from './components/ImportExportModal';
@@ -603,7 +603,7 @@ export default function App() {
                 </div>
             </main>
 
-            <CartButton itemCount={cartItemCount} onClick={() => setIsCartOpen(true)} />
+
 
             <CartModal
                 isOpen={isCartOpen}
