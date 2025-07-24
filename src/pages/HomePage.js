@@ -60,17 +60,17 @@ const HomePage = ({
   const gridClassName = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <header className={`bg-[var(--color-bg-secondary)] shadow rounded-lg p-3 mb-4 border border-[var(--color-border)] ${isGlowActive ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className={`bg-[var(--color-bg-secondary)] shadow rounded-lg p-1.5 mb-2 border border-[var(--color-border)] ${isGlowActive ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-1.5">
           <div className="relative md:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--color-text-secondary)]" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
             <input 
               type="text"
               placeholder='Buscar productos...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-2 pl-10 pr-4 text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+              className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md py-1 pl-7 pr-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all duration-200"
             />
           </div>
           
@@ -122,19 +122,19 @@ const HomePage = ({
             )}
           </div>
           
-          <div className="flex items-center justify-end gap-2 md:col-span-1">
-            <div className="flex items-center bg-[var(--color-bg)] rounded-lg p-0.5 border border-[var(--color-border)]">
+          <div className="flex items-center justify-end gap-1.5 md:col-span-1">
+            <div className="flex items-center bg-[var(--color-bg)] rounded-md p-0.5 border border-[var(--color-border)]">
               <button 
                 onClick={() => setView('card')} 
-                className={`p-1.5 rounded-md ${view === 'card' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
+                className={`p-1 rounded-sm ${view === 'card' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
               >
-                <LayoutGrid className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                <LayoutGrid className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
               </button>
               <button 
                 onClick={() => setView('list')} 
-                className={`p-1.5 rounded-md ${view === 'list' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
+                className={`p-1 rounded-sm ${view === 'list' ? 'bg-[var(--color-bg-secondary)] shadow' : ''}`}
               >
-                <List className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                <List className="h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
               </button>
             </div>
             
@@ -142,14 +142,14 @@ const HomePage = ({
               <select 
                 onChange={(e) => setSort(e.target.value)} 
                 value={sort} 
-                className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-1.5 pl-3 pr-8 text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
+                className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md py-1 pl-2.5 pr-6 text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-xs"
               >
                 <option value="alphabetical">Alfabético</option>
                 <option value="stock">Stock</option>
                 <option value="price">Precio</option>
                 <option value="category">Categoría</option>
               </select>
-              <ChevronDown className="h-4 w-4 text-[var(--color-text-secondary)] absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="h-3.5 w-3.5 text-[var(--color-text-secondary)] absolute top-1/2 right-1.5 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>

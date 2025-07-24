@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { BarChart2, Home, Cpu, BookText, Settings, Sun, Download, Upload, LogIn } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { BarChart2, Home, Cpu, BookText, LogIn } from 'lucide-react';
 import { useRandomGlow } from '../hooks/useRandomGlow';
+import { useVirtualKeyboard } from '../hooks/useVirtualKeyboard';
 import UserMenu from './UserMenu';
 
 const Navbar = ({ 
@@ -14,7 +15,6 @@ const Navbar = ({
   showNotification,
   themeType 
 }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   
   const navItems = [
@@ -24,21 +24,18 @@ const Navbar = ({
   ];
 
   const { isGlowActive } = useRandomGlow(themeType === 'dark');
+  const { isKeyboardOpen } = useVirtualKeyboard();
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuRef]);
+  // El useEffect para handleClickOutside ya no es necesario
+  // ya que eliminamos el estado isMenuOpen
+
+  // Ocultar navbar cuando el teclado esté abierto
+  if (isKeyboardOpen) {
+    return null;
+  }
 
   return (
-    <nav className={`bg-[var(--color-bg-navbar)] backdrop-blur-lg shadow-sm sticky top-0 z-50 border-b border-[var(--color-border)] transition-shadow duration-500 ${isGlowActive ? 'dark-glow' : ''} ${'light-shadow'}`}>
+    <nav className={`bg-[var(--color-bg-navbar)] backdrop-blur-lg shadow-sm sticky top-0 z-50 border-b border-[var(--color-border)] transition-all duration-300 ${isGlowActive ? 'dark-glow' : ''} ${'light-shadow'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-3 items-center h-16">
           {/* Left section - Vacío para balance */}

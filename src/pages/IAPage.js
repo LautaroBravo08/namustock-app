@@ -265,30 +265,30 @@ const IAPage = ({
           </div>
         </div>
 
-        <div className={`bg-[var(--color-bg-secondary)] p-6 rounded-xl shadow-lg border border-[var(--color-border)] ${isGlowActive3 ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
-          <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Inventario de la Tienda</h2>
-            <div className="flex gap-2 items-center">
+        <div className={`bg-[var(--color-bg-secondary)] p-4 rounded-xl shadow-lg border border-[var(--color-border)] ${isGlowActive3 ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
+          <div className="flex flex-wrap gap-2 justify-between items-center mb-3">
+            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">Inventario de la Tienda</h2>
+            <div className="flex gap-1.5 items-center">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--color-text-secondary)]" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-secondary)]" />
                 <input 
                   type="text"
                   placeholder='Buscar en inventario...'
                   value={inventorySearchTerm}
                   onChange={(e) => setInventorySearchTerm(e.target.value)}
-                  className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-2 pl-10 pr-4 text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md py-1 pl-7 pr-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all duration-200"
                 />
               </div>
               <div className="relative">
                 <select 
                   onChange={(e) => setInventorySort(e.target.value)} 
                   value={inventorySort} 
-                  className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg py-2 pl-3 pr-8 text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className="appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md py-1 pl-2.5 pr-6 text-sm text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all duration-200"
                 >
                   <option value="alphabetical">Alfabético</option>
                   <option value="stock">Stock</option>
                 </select>
-                <ChevronDown className="h-5 w-5 text-[var(--color-text-secondary)] absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="h-3.5 w-3.5 text-[var(--color-text-secondary)] absolute top-1/2 right-1.5 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
           </div>
