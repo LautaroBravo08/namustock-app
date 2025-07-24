@@ -96,10 +96,23 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
 
     try {
       // Mostrar información de la imagen original
-      const imageInfo = await getImageInfo(file);
-      console.log('📸 Imagen original:', imageInfo);
+      console.log('📸 Procesando archivo:', {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+      });
       
-      setOptimizationProgress(`Optimizando imagen (${imageInfo.sizeMB} MB)...`);
+      setOptimizationProgress(`Procesando ${file.name}...`);
+
+      // Intentar obtener información de la imagen
+      let imageInfo = null;
+      try {
+        imageInfo = await getImageInfo(file);
+        setOptimizationProgress(`Optimizando imagen (${imageInfo.sizeMB} MB)...`);
+      } catch (infoError) {
+        console.log('⚠️ No se pudo obtener info de imagen, continuando...');
+        setOptimizationProgress('Optimizando imagen...');
+      }
 
       // Optimizar la imagen
       const optimizedResult = await optimizeProductImage(file);
@@ -111,29 +124,51 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
       
       setOptimizationProgress('¡Imagen optimizada exitosamente!');
       
-      // Mostrar notificación de éxito
-      console.log('✅ Imagen optimizada y cargada exitosamente');
+      // Mostrar información de éxito
+      console.log('✅ Imagen optimizada y cargada exitosamente:', {
+        original: `${(optimizedResult.originalSize / 1024 / 1024).toFixed(2)} MB`,
+        optimized: `${(optimizedResult.optimizedSize / 1024 / 1024).toFixed(2)} MB`,
+        dimensions: `${optimizedResult.dimensions.width}x${optimizedResult.dimensions.height}`,
+        format: optimizedResult.format
+      });
       
       // Limpiar estado después de un momento
       setTimeout(() => {
         setIsOptimizing(false);
         setOptimizationProgress('');
-      }, 1500);
+      }, 2000);
       
     } catch (error) {
       console.error('❌ Error optimizando imagen:', error);
-      setOptimizationProgress('Error optimizando, usando imagen original...');
+      setOptimizationProgress('Optimización falló, usando imagen original...');
       
-      // Fallback: usar la imagen original si falla la optimización
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        handleImageUrlChange(uploadTargetIndex, e.target.result);
+      // Fallback mejorado: usar la imagen original
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          handleImageUrlChange(uploadTargetIndex, e.target.result);
+          setOptimizationProgress('Imagen cargada sin optimización');
+          setTimeout(() => {
+            setIsOptimizing(false);
+            setOptimizationProgress('');
+          }, 1500);
+        };
+        reader.onerror = () => {
+          setOptimizationProgress('Error cargando imagen');
+          setTimeout(() => {
+            setIsOptimizing(false);
+            setOptimizationProgress('');
+          }, 1500);
+        };
+        reader.readAsDataURL(file);
+      } catch (fallbackError) {
+        console.error('❌ Error en fallback:', fallbackError);
+        setOptimizationProgress('Error procesando imagen');
         setTimeout(() => {
           setIsOptimizing(false);
           setOptimizationProgress('');
-        }, 1000);
-      };
-      reader.readAsDataURL(file);
+        }, 1500);
+      }
     }
     
     event.target.value = '';

@@ -12,20 +12,55 @@ export const optimizeImage = (file, options = {}) => {
       format = 'jpeg'
     } = options;
 
-    // Verificar que es un archivo de imagen
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('El archivo debe ser una imagen'));
+    console.log('🖼️ Iniciando optimización de imagen:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+    });
+
+    // Verificar que es un archivo (más permisivo)
+    if (!file || !file.type) {
+      reject(new Error('Archivo inválido'));
+      return;
+    }
+
+    // Ser más permisivo con tipos de imagen
+    const isImage = file.type.startsWith('image/') || 
+                   file.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i);
+    
+    if (!isImage) {
+      reject(new Error('El archivo debe ser una imagen (jpg, png, gif, bmp, webp, svg)'));
       return;
     }
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      reject(new Error('No se pudo crear el contexto del canvas'));
+      return;
+    }
+
     const img = new Image();
+
+    // Configurar CORS para imágenes externas
+    img.crossOrigin = 'anonymous';
 
     img.onload = () => {
       try {
+        console.log('🖼️ Imagen cargada:', {
+          originalWidth: img.width,
+          originalHeight: img.height
+        });
+
         // Calcular nuevas dimensiones manteniendo la proporción
         let { width, height } = img;
+        
+        // Validar dimensiones originales
+        if (width <= 0 || height <= 0) {
+          reject(new Error('Dimensiones de imagen inválidas'));
+          return;
+        }
         
         // Redimensionar si excede los límites
         if (width > maxWidth || height > maxHeight) {
@@ -40,62 +75,138 @@ export const optimizeImage = (file, options = {}) => {
           }
         }
 
+        // Asegurar que las dimensiones sean enteros positivos
+        width = Math.max(1, Math.floor(width));
+        height = Math.max(1, Math.floor(height));
+
+        console.log('🖼️ Nuevas dimensiones:', { width, height });
+
         // Configurar canvas
         canvas.width = width;
         canvas.height = height;
 
+        // Limpiar canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // Configurar calidad de renderizado
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
         // Dibujar imagen redimensionada
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convertir a blob optimizado
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              // Crear un nuevo File object con el blob optimizado
-              const optimizedFile = new File([blob], file.name, {
-                type: `image/${format}`,
-                lastModified: Date.now()
-              });
+        // Intentar múltiples formatos si falla uno
+        const tryFormats = ['jpeg', 'png', 'webp'];
+        let currentFormatIndex = tryFormats.indexOf(format);
+        if (currentFormatIndex === -1) currentFormatIndex = 0;
 
-              console.log('🖼️ Imagen optimizada:', {
-                original: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                optimized: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
-                reduction: `${(((file.size - blob.size) / file.size) * 100).toFixed(1)}%`,
-                dimensions: `${width}x${height}`
-              });
+        const attemptConversion = (formatToTry, qualityToTry) => {
+          try {
+            canvas.toBlob(
+              (blob) => {
+                if (blob && blob.size > 0) {
+                  console.log('🖼️ Conversión exitosa:', {
+                    format: formatToTry,
+                    quality: qualityToTry,
+                    size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`
+                  });
 
-              resolve({
-                file: optimizedFile,
-                dataUrl: canvas.toDataURL(`image/${format}`, quality),
-                originalSize: file.size,
-                optimizedSize: blob.size,
-                dimensions: { width, height }
-              });
+                  // Crear un nuevo File object con el blob optimizado
+                  const optimizedFile = new File([blob], file.name, {
+                    type: `image/${formatToTry}`,
+                    lastModified: Date.now()
+                  });
+
+                  const reduction = file.size > 0 ? (((file.size - blob.size) / file.size) * 100).toFixed(1) : '0';
+
+                  console.log('🖼️ Imagen optimizada exitosamente:', {
+                    original: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                    optimized: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
+                    reduction: `${reduction}%`,
+                    dimensions: `${width}x${height}`,
+                    format: formatToTry
+                  });
+
+                  resolve({
+                    file: optimizedFile,
+                    dataUrl: canvas.toDataURL(`image/${formatToTry}`, qualityToTry),
+                    originalSize: file.size,
+                    optimizedSize: blob.size,
+                    dimensions: { width, height },
+                    format: formatToTry
+                  });
+                } else {
+                  // Intentar con el siguiente formato
+                  currentFormatIndex++;
+                  if (currentFormatIndex < tryFormats.length) {
+                    console.log(`⚠️ Formato ${formatToTry} falló, intentando ${tryFormats[currentFormatIndex]}`);
+                    attemptConversion(tryFormats[currentFormatIndex], qualityToTry);
+                  } else {
+                    // Intentar con menor calidad
+                    if (qualityToTry > 0.3) {
+                      console.log(`⚠️ Reduciendo calidad a ${qualityToTry - 0.2}`);
+                      currentFormatIndex = 0;
+                      attemptConversion(tryFormats[0], qualityToTry - 0.2);
+                    } else {
+                      reject(new Error('No se pudo generar blob optimizado con ningún formato'));
+                    }
+                  }
+                }
+              },
+              `image/${formatToTry}`,
+              qualityToTry
+            );
+          } catch (blobError) {
+            console.error('Error en toBlob:', blobError);
+            // Intentar con el siguiente formato
+            currentFormatIndex++;
+            if (currentFormatIndex < tryFormats.length) {
+              attemptConversion(tryFormats[currentFormatIndex], qualityToTry);
             } else {
-              reject(new Error('Error al optimizar la imagen'));
+              reject(new Error(`Error al convertir imagen: ${blobError.message}`));
             }
-          },
-          `image/${format}`,
-          quality
-        );
+          }
+        };
+
+        // Iniciar conversión
+        attemptConversion(tryFormats[currentFormatIndex], quality);
+
       } catch (error) {
+        console.error('Error procesando imagen:', error);
         reject(new Error(`Error procesando la imagen: ${error.message}`));
       }
     };
 
-    img.onerror = () => {
-      reject(new Error('Error al cargar la imagen'));
+    img.onerror = (error) => {
+      console.error('Error cargando imagen:', error);
+      reject(new Error('Error al cargar la imagen. Verifica que el archivo sea una imagen válida.'));
     };
 
-    // Cargar imagen
+    // Cargar imagen con manejo de errores mejorado
     const reader = new FileReader();
+    
     reader.onload = (e) => {
-      img.src = e.target.result;
+      try {
+        if (e.target.result) {
+          img.src = e.target.result;
+        } else {
+          reject(new Error('No se pudo leer el contenido del archivo'));
+        }
+      } catch (error) {
+        reject(new Error(`Error estableciendo fuente de imagen: ${error.message}`));
+      }
     };
-    reader.onerror = () => {
-      reject(new Error('Error al leer el archivo'));
+    
+    reader.onerror = (error) => {
+      console.error('Error leyendo archivo:', error);
+      reject(new Error('Error al leer el archivo. Verifica que no esté corrupto.'));
     };
-    reader.readAsDataURL(file);
+
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      reject(new Error(`Error iniciando lectura del archivo: ${error.message}`));
+    }
   });
 };
 

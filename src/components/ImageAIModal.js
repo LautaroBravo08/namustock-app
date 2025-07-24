@@ -26,10 +26,23 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
 
       try {
         // Mostrar información de la imagen original
-        const imageInfo = await getImageInfo(file);
-        console.log('📸 Imagen para IA original:', imageInfo);
+        console.log('📸 Procesando archivo para IA:', {
+          name: file.name,
+          type: file.type,
+          size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+        });
         
-        setOptimizationProgress(`Optimizando para IA (${imageInfo.sizeMB} MB)...`);
+        setOptimizationProgress(`Procesando ${file.name} para IA...`);
+
+        // Intentar obtener información de la imagen
+        let imageInfo = null;
+        try {
+          imageInfo = await getImageInfo(file);
+          setOptimizationProgress(`Optimizando para IA (${imageInfo.sizeMB} MB)...`);
+        } catch (infoError) {
+          console.log('⚠️ No se pudo obtener info de imagen, continuando...');
+          setOptimizationProgress('Optimizando para análisis de IA...');
+        }
 
         // Optimizar la imagen para análisis de IA (más pequeña)
         const optimizedResult = await optimizeImageForAI(file);
@@ -41,28 +54,51 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
         
         setOptimizationProgress('¡Imagen optimizada para IA!');
         
-        console.log('✅ Imagen optimizada para IA cargada exitosamente');
+        // Mostrar información de éxito
+        console.log('✅ Imagen optimizada para IA cargada exitosamente:', {
+          original: `${(optimizedResult.originalSize / 1024 / 1024).toFixed(2)} MB`,
+          optimized: `${(optimizedResult.optimizedSize / 1024 / 1024).toFixed(2)} MB`,
+          dimensions: `${optimizedResult.dimensions.width}x${optimizedResult.dimensions.height}`,
+          format: optimizedResult.format
+        });
         
         // Limpiar estado después de un momento
         setTimeout(() => {
           setIsOptimizing(false);
           setOptimizationProgress('');
-        }, 1500);
+        }, 2000);
         
       } catch (error) {
         console.error('❌ Error optimizando imagen para IA:', error);
-        setOptimizationProgress('Error optimizando, usando imagen original...');
+        setOptimizationProgress('Optimización falló, usando imagen original...');
         
-        // Fallback: usar la imagen original si falla la optimización
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setImageSrc(event.target.result);
+        // Fallback mejorado: usar la imagen original
+        try {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setImageSrc(event.target.result);
+            setOptimizationProgress('Imagen cargada sin optimización');
+            setTimeout(() => {
+              setIsOptimizing(false);
+              setOptimizationProgress('');
+            }, 1500);
+          };
+          reader.onerror = () => {
+            setOptimizationProgress('Error cargando imagen');
+            setTimeout(() => {
+              setIsOptimizing(false);
+              setOptimizationProgress('');
+            }, 1500);
+          };
+          reader.readAsDataURL(file);
+        } catch (fallbackError) {
+          console.error('❌ Error en fallback:', fallbackError);
+          setOptimizationProgress('Error procesando imagen');
           setTimeout(() => {
             setIsOptimizing(false);
             setOptimizationProgress('');
-          }, 1000);
-        };
-        reader.readAsDataURL(file);
+          }, 1500);
+        }
       }
     }
   };
