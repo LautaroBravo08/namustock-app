@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.31",
+  "version": "1.0.34",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -9,6 +9,7 @@
     "@capacitor/browser": "^7.0.1",
     "@capacitor/cli": "^7.4.2",
     "@capacitor/core": "^7.4.2",
+    "@capacitor/device": "^7.0.1",
     "@capacitor/filesystem": "^7.1.2",
     "@capacitor/ios": "^7.4.2",
     "@capacitor/local-notifications": "^7.0.1",
@@ -84,7 +85,14 @@
     "cleanup": "node cleanup-apks.js",
     "cleanup:all": "node cleanup-apks.js all",
     "cleanup:stats": "node cleanup-apks.js stats",
-    "test:update-system": "node test-update-system.js"
+    "test:update-system": "node test-update-system.js",
+    "deploy:auto": "node deploy-simple.js patch",
+    "deploy:auto:minor": "node deploy-simple.js minor",
+    "deploy:auto:major": "node deploy-simple.js major",
+    "release:github": "node auto-deploy-github.js patch",
+    "release:github:minor": "node auto-deploy-github.js minor",
+    "release:github:major": "node auto-deploy-github.js major",
+    "setup:github": "node setup-github-auto-deploy.js"
   },
   "eslintConfig": {
     "extends": [

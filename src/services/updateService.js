@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.30'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.34'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -369,7 +369,6 @@ class UpdateService {
       
       // Importar plugins de Capacitor necesarios
       const { Filesystem, Directory } = await import('@capacitor/filesystem');
-      const { CapacitorHttp } = await import('@capacitor/core');
       const { Device } = await import('@capacitor/device');
       
       // Verificar permisos
