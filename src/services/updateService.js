@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.39'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.40'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -371,7 +371,7 @@ class UpdateService {
     return false;
   }
 
-  // Aplicar actualización móvil - CON DESCARGA IN-APP
+  // Aplicar actualización móvil - CON MÚLTIPLES MÉTODOS
   async applyMobileUpdate(updateInfo) {
     if (!updateInfo.downloadUrl) {
       throw new Error('No hay URL de descarga disponible');
@@ -380,14 +380,61 @@ class UpdateService {
     const platform = Capacitor.getPlatform();
     
     if (platform === 'android') {
-      return await this.downloadAndInstallAndroid(updateInfo);
+      // Intentar descarga in-app primero, luego fallback a navegador
+      try {
+        return await this.downloadAndInstallAndroid(updateInfo);
+      } catch (error) {
+        console.log('🔄 Descarga in-app falló, usando navegador del sistema');
+        return await this.downloadWithBrowser(updateInfo);
+      }
     } else if (platform === 'ios') {
       // iOS requiere App Store o TestFlight
-      window.open(updateInfo.downloadUrl, '_system');
-      return true;
+      return await this.downloadWithBrowser(updateInfo);
     }
     
     return false;
+  }
+
+  // Método de descarga usando navegador del sistema
+  async downloadWithBrowser(updateInfo) {
+    try {
+      console.log('🌐 Abriendo descarga en navegador del sistema');
+      
+      // Usar plugin Browser de Capacitor para mejor control
+      const { Browser } = await import('@capacitor/browser');
+      
+      await Browser.open({
+        url: updateInfo.downloadUrl,
+        windowName: '_system'
+      });
+      
+      // Notificar al usuario
+      this.notifyListeners({
+        type: 'download-progress',
+        progress: 100,
+        message: 'Descarga abierta en navegador. Instala manualmente cuando termine.'
+      });
+      
+      return true;
+    } catch (browserError) {
+      console.error('❌ Error abriendo navegador:', browserError);
+      
+      // Fallback final: window.open
+      try {
+        window.open(updateInfo.downloadUrl, '_system');
+        
+        this.notifyListeners({
+          type: 'download-progress',
+          progress: 100,
+          message: 'Descarga iniciada. Instala manualmente cuando termine.'
+        });
+        
+        return true;
+      } catch (windowError) {
+        console.error('❌ Error en window.open:', windowError);
+        throw new Error('No se pudo abrir la descarga');
+      }
+    }
   }
 
   // Descargar e instalar APK en Android - MEJORADO
