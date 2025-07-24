@@ -25,7 +25,7 @@ android {
         }
     }
     
-    // Configuración de firma
+    // Configuración de firma - Usar debug key para desarrollo
     signingConfigs {
         release {
             if (keystorePropertiesFile.exists()) {
@@ -33,6 +33,12 @@ android {
                 keyPassword keystoreProperties['keyPassword']
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
+            } else {
+                // Usar debug keystore como fallback
+                storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
             }
         }
     }
