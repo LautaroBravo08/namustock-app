@@ -131,12 +131,11 @@ async function main() {
       execCommand(`git commit -m "${commitMessage}"`, 'Creando commit');
       
       // Crear tag
-      const tagName = `v${newVersion}`;
-      execCommand(`git tag -a ${tagName} -m "Release ${newVersion}"`, 'Creando tag');
+      execCommand(`git tag -a v${newVersion} -m "Release ${newVersion}"`, 'Creando tag');
       
       // Push todo
       execCommand('git push origin master', 'Pusheando cambios');
-      execCommand(`git push origin ${tagName}`, 'Pusheando tag');
+      execCommand(`git push origin v${newVersion}`, 'Pusheando tag');
       
     } catch (gitError) {
       logError(`Error en Git: ${gitError.message}`);
@@ -145,6 +144,8 @@ async function main() {
     
     // 6. CREAR GITHUB RELEASE AUTOMÁTICAMENTE
     logStep('🐙', 'Creando GitHub Release automáticamente...');
+    
+    const tagName = `v${newVersion}`;
     
     // Generar release notes
     const releaseNotes = `# 🚀 NamuStock v${newVersion}
@@ -201,7 +202,6 @@ A partir de esta versión, todas las futuras actualizaciones se instalarán auto
     
     try {
       // Crear release con GitHub CLI
-      const tagName = `v${newVersion}`;
       const releaseTitle = `🚀 NamuStock v${newVersion} - Actualizaciones Automáticas`;
       const createCommand = `gh release create ${tagName} "${apkPath}" --title "${releaseTitle}" --notes-file "${notesFile}" --latest`;
       

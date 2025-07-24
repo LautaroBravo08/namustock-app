@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.36'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.0.37'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -195,18 +195,10 @@ class UpdateService {
         console.log('⚠️ GitHub API falló, intentando método alternativo');
       }
 
-      // Método 2: Si la API falla, usar información local simulada
+      // Método 2: Si la API falla, mostrar error
       if (!release) {
-        console.log('🔄 Usando información de actualización local');
-        // Simular release para testing
-        release = {
-          tag_name: 'v1.0.35', // Versión de prueba
-          body: 'Nueva versión con actualizaciones automáticas mejoradas',
-          assets: [{
-            name: 'namustock-1.0.35.apk',
-            browser_download_url: `https://github.com/${githubRepo}/releases/download/v1.0.35/namustock-1.0.35.apk`
-          }]
-        };
+        console.log('❌ No se pudo obtener información del release desde GitHub API');
+        return { available: false, platform: platform };
       }
 
       const latestVersion = release.tag_name.replace('v', '');
@@ -249,7 +241,10 @@ class UpdateService {
   // Obtener URL de descarga para móvil desde GitHub
   getMobileDownloadUrl(release) {
     const platform = Capacitor.getPlatform();
-    const asset = release.assets.find(asset => {
+    console.log('🔍 Buscando asset para plataforma:', platform);
+    console.log('📦 Assets disponibles:', release.assets?.map(a => a.name) || 'No assets');
+    
+    const asset = release.assets?.find(asset => {
       if (platform === 'android') {
         return asset.name.endsWith('.apk');
       } else if (platform === 'ios') {
@@ -258,7 +253,14 @@ class UpdateService {
       return false;
     });
 
-    return asset ? asset.browser_download_url : null;
+    if (asset) {
+      console.log('✅ Asset encontrado:', asset.name);
+      console.log('🔗 URL de descarga:', asset.browser_download_url);
+      return asset.browser_download_url;
+    } else {
+      console.log('❌ No se encontró asset para la plataforma:', platform);
+      return null;
+    }
   }
 
   // Comparar versiones
