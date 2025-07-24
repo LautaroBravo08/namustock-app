@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Camera } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import CameraConfirmationModal from './CameraConfirmationModal';
-import { optimizeProductImage, getImageInfo } from '../utils/imageOptimizer';
 
 const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState(null);
@@ -10,8 +9,6 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   const [uploadTargetIndex, setUploadTargetIndex] = useState(0);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [cameraTargetIndex, setCameraTargetIndex] = useState(0);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizationProgress, setOptimizationProgress] = useState('');
 
   useBodyScrollLock(isOpen);
 
@@ -87,89 +84,26 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     handleImageUrlChange(cameraTargetIndex, photoDataUrl);
   };
 
-  const handleFileChange = async (event) => {
+  const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    setIsOptimizing(true);
-    setOptimizationProgress('Analizando imagen...');
+    console.log('📸 Cargando archivo:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+    });
 
-    try {
-      // Mostrar información de la imagen original
-      console.log('📸 Procesando archivo:', {
-        name: file.name,
-        type: file.type,
-        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
-      });
-      
-      setOptimizationProgress(`Procesando ${file.name}...`);
-
-      // Intentar obtener información de la imagen
-      let imageInfo = null;
-      try {
-        imageInfo = await getImageInfo(file);
-        setOptimizationProgress(`Optimizando imagen (${imageInfo.sizeMB} MB)...`);
-      } catch (infoError) {
-        console.log('⚠️ No se pudo obtener info de imagen, continuando...');
-        setOptimizationProgress('Optimizando imagen...');
-      }
-
-      // Optimizar la imagen
-      const optimizedResult = await optimizeProductImage(file);
-      
-      setOptimizationProgress('Aplicando optimización...');
-      
-      // Usar la imagen optimizada
-      handleImageUrlChange(uploadTargetIndex, optimizedResult.dataUrl);
-      
-      setOptimizationProgress('¡Imagen optimizada exitosamente!');
-      
-      // Mostrar información de éxito
-      console.log('✅ Imagen optimizada y cargada exitosamente:', {
-        original: `${(optimizedResult.originalSize / 1024 / 1024).toFixed(2)} MB`,
-        optimized: `${(optimizedResult.optimizedSize / 1024 / 1024).toFixed(2)} MB`,
-        dimensions: `${optimizedResult.dimensions.width}x${optimizedResult.dimensions.height}`,
-        format: optimizedResult.format
-      });
-      
-      // Limpiar estado después de un momento
-      setTimeout(() => {
-        setIsOptimizing(false);
-        setOptimizationProgress('');
-      }, 2000);
-      
-    } catch (error) {
-      console.error('❌ Error optimizando imagen:', error);
-      setOptimizationProgress('Optimización falló, usando imagen original...');
-      
-      // Fallback mejorado: usar la imagen original
-      try {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          handleImageUrlChange(uploadTargetIndex, e.target.result);
-          setOptimizationProgress('Imagen cargada sin optimización');
-          setTimeout(() => {
-            setIsOptimizing(false);
-            setOptimizationProgress('');
-          }, 1500);
-        };
-        reader.onerror = () => {
-          setOptimizationProgress('Error cargando imagen');
-          setTimeout(() => {
-            setIsOptimizing(false);
-            setOptimizationProgress('');
-          }, 1500);
-        };
-        reader.readAsDataURL(file);
-      } catch (fallbackError) {
-        console.error('❌ Error en fallback:', fallbackError);
-        setOptimizationProgress('Error procesando imagen');
-        setTimeout(() => {
-          setIsOptimizing(false);
-          setOptimizationProgress('');
-        }, 1500);
-      }
-    }
+    // Cargar imagen directamente sin optimización
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      handleImageUrlChange(uploadTargetIndex, e.target.result);
+      console.log('✅ Imagen cargada exitosamente sin optimización');
+    };
+    reader.onerror = () => {
+      console.error('❌ Error cargando imagen');
+    };
+    reader.readAsDataURL(file);
     
     event.target.value = '';
   };
@@ -280,20 +214,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
                 URLs de Imágenes
               </label>
               
-              {/* Indicador de optimización */}
-              {isOptimizing && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                      {optimizationProgress}
-                    </span>
-                  </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Optimizando imagen para mejor rendimiento...
-                  </div>
-                </div>
-              )}
+
               
               {formData.imageUrls.map((url, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -303,30 +224,27 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
                     onChange={(e) => handleImageUrlChange(index, e.target.value)} 
                     placeholder={`URL o subida de imagen ${index + 1}`} 
                     className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
-                    disabled={isOptimizing}
                   />
                   <button 
                     type="button" 
                     onClick={() => handleUploadClick(index)} 
-                    disabled={isOptimizing}
-                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Subir imagen (se optimizará automáticamente)"
+                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)]"
+                    title="Subir imagen"
                   >
                     <Upload className="h-5 w-5 text-[var(--color-text-secondary)]"/>
                   </button>
                   <button 
                     type="button" 
                     onClick={() => handleCameraClick(index)} 
-                    disabled={isOptimizing}
-                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md hover:bg-[var(--color-border)]"
                   >
                     <Camera className="h-5 w-5 text-[var(--color-text-secondary)]"/>
                   </button>
                 </div>
               ))}
               
-              <div className="text-xs text-[var(--color-text-secondary)] mt-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
-                <strong>✨ Optimización automática:</strong> Las imágenes se redimensionan automáticamente a 800x600px y se comprimen para mejor rendimiento sin perder calidad visual.
+              <div className="text-xs text-[var(--color-text-secondary)] mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+                <strong>📁 Sin límites:</strong> Puedes subir imágenes de cualquier tamaño y formato. Se cargarán directamente sin procesamiento.
               </div>
             </div>
           </div>

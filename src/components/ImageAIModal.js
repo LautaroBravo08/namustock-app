@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Search, Upload, Camera, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useRandomGlow } from '../hooks/useRandomGlow';
-import { optimizeImageForAI, getImageInfo } from '../utils/imageOptimizer';
 import { roundUpToMultiple } from '../utils/helpers';
 
 const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargin, roundingMultiple }) => {
@@ -13,93 +12,28 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const { isGlowActive } = useRandomGlow(isOpen && themeType === 'dark');
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizationProgress, setOptimizationProgress] = useState('');
 
   useBodyScrollLock(isOpen);
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setIsOptimizing(true);
-      setOptimizationProgress('Analizando imagen...');
+      console.log('📸 Cargando archivo para IA:', {
+        name: file.name,
+        type: file.type,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+      });
 
-      try {
-        // Mostrar información de la imagen original
-        console.log('📸 Procesando archivo para IA:', {
-          name: file.name,
-          type: file.type,
-          size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
-        });
-        
-        setOptimizationProgress(`Procesando ${file.name} para IA...`);
-
-        // Intentar obtener información de la imagen
-        let imageInfo = null;
-        try {
-          imageInfo = await getImageInfo(file);
-          setOptimizationProgress(`Optimizando para IA (${imageInfo.sizeMB} MB)...`);
-        } catch (infoError) {
-          console.log('⚠️ No se pudo obtener info de imagen, continuando...');
-          setOptimizationProgress('Optimizando para análisis de IA...');
-        }
-
-        // Optimizar la imagen para análisis de IA (más pequeña)
-        const optimizedResult = await optimizeImageForAI(file);
-        
-        setOptimizationProgress('Preparando para análisis...');
-        
-        // Usar la imagen optimizada
-        setImageSrc(optimizedResult.dataUrl);
-        
-        setOptimizationProgress('¡Imagen optimizada para IA!');
-        
-        // Mostrar información de éxito
-        console.log('✅ Imagen optimizada para IA cargada exitosamente:', {
-          original: `${(optimizedResult.originalSize / 1024 / 1024).toFixed(2)} MB`,
-          optimized: `${(optimizedResult.optimizedSize / 1024 / 1024).toFixed(2)} MB`,
-          dimensions: `${optimizedResult.dimensions.width}x${optimizedResult.dimensions.height}`,
-          format: optimizedResult.format
-        });
-        
-        // Limpiar estado después de un momento
-        setTimeout(() => {
-          setIsOptimizing(false);
-          setOptimizationProgress('');
-        }, 2000);
-        
-      } catch (error) {
-        console.error('❌ Error optimizando imagen para IA:', error);
-        setOptimizationProgress('Optimización falló, usando imagen original...');
-        
-        // Fallback mejorado: usar la imagen original
-        try {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            setImageSrc(event.target.result);
-            setOptimizationProgress('Imagen cargada sin optimización');
-            setTimeout(() => {
-              setIsOptimizing(false);
-              setOptimizationProgress('');
-            }, 1500);
-          };
-          reader.onerror = () => {
-            setOptimizationProgress('Error cargando imagen');
-            setTimeout(() => {
-              setIsOptimizing(false);
-              setOptimizationProgress('');
-            }, 1500);
-          };
-          reader.readAsDataURL(file);
-        } catch (fallbackError) {
-          console.error('❌ Error en fallback:', fallbackError);
-          setOptimizationProgress('Error procesando imagen');
-          setTimeout(() => {
-            setIsOptimizing(false);
-            setOptimizationProgress('');
-          }, 1500);
-        }
-      }
+      // Cargar imagen directamente sin optimización
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImageSrc(event.target.result);
+        console.log('✅ Imagen cargada exitosamente para IA sin optimización');
+      };
+      reader.onerror = () => {
+        console.error('❌ Error cargando imagen');
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -209,35 +143,19 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
             </button>
           </div>
           
-          {/* Indicador de optimización */}
-          {isOptimizing && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
-                <div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                    {optimizationProgress}
-                  </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Optimizando imagen para análisis de IA...
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           <div className="bg-[var(--color-bg)] rounded-lg min-h-[300px] flex items-center justify-center flex-col p-4 border-2 border-dashed border-[var(--color-border)]">
             {sourceType === 'upload' && !imageSrc && (
               <button 
                 onClick={() => fileInputRef.current.click()} 
                 className="text-[var(--color-text-secondary)]"
-                disabled={isOptimizing}
               >
                 <Upload className="h-12 w-12 mx-auto mb-2"/>
                 <span className="font-semibold text-[var(--color-text-primary)]">Haz clic para subir</span> o arrastra y suelta
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-                <div className="text-xs text-green-600 dark:text-green-400 mt-2 max-w-xs">
-                  ✨ Las imágenes se optimizan automáticamente para mejor análisis de IA
+                <div className="text-xs text-blue-600 dark:text-blue-400 mt-2 max-w-xs">
+                  📁 Sube imágenes de cualquier tamaño y formato para análisis de IA
                 </div>
               </button>
             )}
