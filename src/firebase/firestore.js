@@ -12,7 +12,13 @@ import {
   updateDoc,
   writeBatch
 } from 'firebase/firestore';
-import { db } from './config';
+import { 
+  ref, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject 
+} from 'firebase/storage';
+import { db, storage } from './config';
 
 // Productos
 export const saveProducts = async (userId, products) => {
@@ -221,4 +227,78 @@ export const getUserSettings = async (userId) => {
   } catch (error) {
     return { settings: null, error: error.message };
   }
+};
+
+// Funciones para manejar imágenes en Firebase Storage
+export const uploadProductImage = async (userId, productId, file, imageIndex) => {
+  try {
+    // Crear referencia única para la imagen
+    const timestamp = Date.now();
+    const fileName = `${productId}_${imageIndex}_${timestamp}.jpg`;
+    const imageRef = ref(storage, `users/${userId}/products/${fileName}`);
+    
+    // Subir archivo
+    const snapshot = await uploadBytes(imageRef, file);
+    
+    // Obtener URL de descarga
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    console.log('✅ Imagen subida exitosamente:', downloadURL);
+    return { url: downloadURL, error: null };
+  } catch (error) {
+    console.error('❌ Error subiendo imagen:', error);
+    return { url: null, error: error.message };
+  }
+};
+
+export const deleteProductImage = async (imageUrl) => {
+  try {
+    // Extraer la referencia de la URL
+    const imageRef = ref(storage, imageUrl);
+    await deleteObject(imageRef);
+    
+    console.log('✅ Imagen eliminada exitosamente:', imageUrl);
+    return { error: null };
+  } catch (error) {
+    console.error('❌ Error eliminando imagen:', error);
+    return { error: error.message };
+  }
+};
+
+// Función helper para convertir File a Blob optimizado
+export const optimizeImageFile = (file, maxWidth = 1200, maxHeight = 900, quality = 0.8) => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Calcular nuevas dimensiones manteniendo proporción
+      let { width, height } = img;
+      
+      if (width > height) {
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Dibujar y comprimir con buena calidad
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/jpeg', quality);
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
 };

@@ -60,14 +60,15 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const compressImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
+  // Función de compresión inteligente que mantiene buena calidad
+  const compressImageWithQuality = (file, maxWidth = 800, maxHeight = 600, quality = 0.75) => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
 
       img.onload = () => {
-        // Calculate new dimensions maintaining aspect ratio
+        // Calcular nuevas dimensiones manteniendo proporción
         let { width, height } = img;
 
         if (width > height) {
@@ -85,15 +86,31 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
         canvas.width = width;
         canvas.height = height;
 
-        // Draw and compress
+        // Dibujar imagen con buena calidad
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        // Comprimir con calidad balanceada
+        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        // Si es muy grande, reducir calidad gradualmente
+        const maxSizeBytes = 200 * 1024; // 200KB máximo por imagen
+        let currentQuality = quality;
+
+        while (compressedDataUrl.length * 0.75 > maxSizeBytes && currentQuality > 0.3) {
+          currentQuality -= 0.1;
+          compressedDataUrl = canvas.toDataURL('image/jpeg', currentQuality);
+        }
+
         resolve(compressedDataUrl);
       };
 
       img.src = URL.createObjectURL(file);
     });
   };
+
+
 
   const handleUploadClick = () => {
     if (formData.imageUrls.length >= 3) {
@@ -113,19 +130,24 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
       return;
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (max 15MB)
+    const maxSize = 15 * 1024 * 1024; // 15MB
     if (file.size > maxSize) {
-      alert('La imagen es demasiado grande. Máximo 5MB permitido.');
+      alert('La imagen es demasiado grande. Máximo 15MB permitido.');
       return;
     }
 
     try {
-      const compressedDataUrl = await compressImage(file);
+      // Comprimir imagen manteniendo buena calidad
+      const compressedDataUrl = await compressImageWithQuality(file);
+
+      // Agregar imagen comprimida al array
       const newImageUrls = [...formData.imageUrls, compressedDataUrl];
       setFormData(prev => ({ ...prev, imageUrls: newImageUrls }));
+
+      console.log('✅ Imagen procesada exitosamente');
     } catch (error) {
-      console.error('Error comprimiendo imagen:', error);
+      console.error('Error procesando imagen:', error);
       alert('Error al procesar la imagen');
     }
 
@@ -252,8 +274,8 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
               onClick={handleUploadClick}
               disabled={formData.imageUrls.length >= 3}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.imageUrls.length >= 3
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  : 'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)]'
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)]'
                 }`}
             >
               <Upload className="h-4 w-4" />
@@ -285,7 +307,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
 
             {/* Información sobre las imágenes */}
             <div className="text-xs text-[var(--color-text-secondary)] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <strong>📸 Subida de imágenes:</strong> Máximo 3 imágenes por producto. Se comprimen automáticamente a 800x600px para optimizar el almacenamiento. Máximo 5MB por imagen.
+              <strong>📸 Imágenes optimizadas:</strong> Máximo 3 imágenes por producto. Se comprimen inteligentemente a 800x600px con 75% de calidad, máximo 200KB cada una para evitar errores de almacenamiento (máximo 15MB de archivo original).
             </div>
           </div>
 
