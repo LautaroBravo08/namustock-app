@@ -91,13 +91,6 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
       return;
     }
 
-    // Verificar que es un archivo de imagen
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG, GIF, etc.)');
-      event.target.value = '';
-      return;
-    }
-
     console.log('📸 Cargando archivo:', {
       name: file.name,
       type: file.type,
@@ -105,7 +98,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
       targetIndex: uploadTargetIndex
     });
 
-    // Cargar imagen directamente sin optimización
+    // Cargar imagen directamente sin validaciones restrictivas
     const reader = new FileReader();
     
     reader.onload = (e) => {
@@ -114,31 +107,23 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
         if (result) {
           console.log('📸 Aplicando imagen al índice:', uploadTargetIndex);
           handleImageUrlChange(uploadTargetIndex, result);
-          console.log('✅ Imagen cargada exitosamente sin optimización');
+          console.log('✅ Imagen cargada exitosamente');
         } else {
           console.error('❌ No se pudo obtener el resultado de la imagen');
-          alert('Error al procesar la imagen. Intenta con otro archivo.');
         }
       } catch (error) {
         console.error('❌ Error procesando imagen:', error);
-        alert('Error al procesar la imagen: ' + error.message);
       }
     };
     
     reader.onerror = (error) => {
       console.error('❌ Error leyendo archivo:', error);
-      alert('Error al leer el archivo. Verifica que no esté corrupto.');
-    };
-    
-    reader.onabort = () => {
-      console.log('⚠️ Lectura de archivo cancelada');
     };
     
     try {
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('❌ Error iniciando lectura:', error);
-      alert('Error al iniciar la lectura del archivo: ' + error.message);
     }
     
     // Limpiar el input para permitir seleccionar el mismo archivo nuevamente

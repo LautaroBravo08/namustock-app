@@ -22,20 +22,13 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
       return;
     }
 
-    // Verificar que es un archivo de imagen
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG, GIF, etc.)');
-      e.target.value = '';
-      return;
-    }
-
     console.log('📸 Cargando archivo para IA:', {
       name: file.name,
       type: file.type,
       size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
     });
 
-    // Cargar imagen directamente sin optimización
+    // Cargar imagen directamente sin validaciones restrictivas
     const reader = new FileReader();
     
     reader.onload = (event) => {
@@ -43,31 +36,23 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
         const result = event.target.result;
         if (result) {
           setImageSrc(result);
-          console.log('✅ Imagen cargada exitosamente para IA sin optimización');
+          console.log('✅ Imagen cargada exitosamente para IA');
         } else {
           console.error('❌ No se pudo obtener el resultado de la imagen');
-          alert('Error al procesar la imagen. Intenta con otro archivo.');
         }
       } catch (error) {
         console.error('❌ Error procesando imagen:', error);
-        alert('Error al procesar la imagen: ' + error.message);
       }
     };
     
     reader.onerror = (error) => {
       console.error('❌ Error leyendo archivo:', error);
-      alert('Error al leer el archivo. Verifica que no esté corrupto.');
-    };
-    
-    reader.onabort = () => {
-      console.log('⚠️ Lectura de archivo cancelada');
     };
     
     try {
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('❌ Error iniciando lectura:', error);
-      alert('Error al iniciar la lectura del archivo: ' + error.message);
     }
     
     // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
