@@ -62,6 +62,41 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const compressImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.8) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calculate new dimensions
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const addImage = (imageDataUrl) => {
     const newImageUrls = [...formData.imageUrls, imageDataUrl];
     setFormData(prev => ({ ...prev, imageUrls: newImageUrls }));
@@ -80,11 +115,22 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     setIsCameraModalOpen(true);
   };
 
-  const handleConfirmPhoto = (photoDataUrl) => {
-    addImage(photoDataUrl);
+  const handleConfirmPhoto = async (photoDataUrl) => {
+    // Convert data URL back to blob for compression
+    const response = await fetch(photoDataUrl);
+    const blob = await response.blob();
+    const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+    try {
+      const compressedDataUrl = await compressImage(file);
+      addImage(compressedDataUrl);
+    } catch (error) {
+      console.error('Error comprimiendo foto:', error);
+      addImage(photoDataUrl); // Fallback to original if compression fails
+    }
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) {
       return;
@@ -103,20 +149,13 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      const result = e.target.result;
-      if (result) {
-        addImage(result);
-      }
-    };
-
-    reader.onerror = () => {
-      alert('Error al cargar la imagen');
-    };
-
-    reader.readAsDataURL(file);
+    try {
+      const compressedDataUrl = await compressImage(file);
+      addImage(compressedDataUrl);
+    } catch (error) {
+      console.error('Error comprimiendo imagen:', error);
+      alert('Error al procesar la imagen');
+    }
 
     // Clear input to allow selecting the same file again
     event.target.value = '';
@@ -272,7 +311,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
               )}
 
               <div className="text-xs text-[var(--color-text-secondary)] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <strong>📸 Solo subida y cámara:</strong> Puedes agregar imágenes subiendo archivos desde tu dispositivo o tomando fotos directamente. Máximo 10MB por imagen.
+                <strong>📸 Solo subida y cámara:</strong> Las imágenes se comprimen automáticamente a 800x600px para optimizar el almacenamiento. Puedes subir archivos o tomar fotos directamente.
               </div>
             </div>
           </div>
