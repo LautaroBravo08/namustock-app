@@ -86,25 +86,62 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+      console.log('⚠️ No se seleccionó ningún archivo');
+      return;
+    }
+
+    // Verificar que es un archivo de imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido (JPG, PNG, GIF, etc.)');
+      event.target.value = '';
+      return;
+    }
 
     console.log('📸 Cargando archivo:', {
       name: file.name,
       type: file.type,
-      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      targetIndex: uploadTargetIndex
     });
 
     // Cargar imagen directamente sin optimización
     const reader = new FileReader();
-    reader.onload = (e) => {
-      handleImageUrlChange(uploadTargetIndex, e.target.result);
-      console.log('✅ Imagen cargada exitosamente sin optimización');
-    };
-    reader.onerror = () => {
-      console.error('❌ Error cargando imagen');
-    };
-    reader.readAsDataURL(file);
     
+    reader.onload = (e) => {
+      try {
+        const result = e.target.result;
+        if (result) {
+          console.log('📸 Aplicando imagen al índice:', uploadTargetIndex);
+          handleImageUrlChange(uploadTargetIndex, result);
+          console.log('✅ Imagen cargada exitosamente sin optimización');
+        } else {
+          console.error('❌ No se pudo obtener el resultado de la imagen');
+          alert('Error al procesar la imagen. Intenta con otro archivo.');
+        }
+      } catch (error) {
+        console.error('❌ Error procesando imagen:', error);
+        alert('Error al procesar la imagen: ' + error.message);
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error('❌ Error leyendo archivo:', error);
+      alert('Error al leer el archivo. Verifica que no esté corrupto.');
+    };
+    
+    reader.onabort = () => {
+      console.log('⚠️ Lectura de archivo cancelada');
+    };
+    
+    try {
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('❌ Error iniciando lectura:', error);
+      alert('Error al iniciar la lectura del archivo: ' + error.message);
+    }
+    
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
     event.target.value = '';
   };
 
