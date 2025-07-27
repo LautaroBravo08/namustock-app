@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.70",
+  "version": "1.0.73",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -51,12 +51,6 @@
     "android": "npm run dev:android",
     "ios": "npm run dev:ios",
     "build:all": "npm run build && npm run cap:build",
-    "version:patch": "node update-version.js patch",
-    "version:minor": "node update-version.js minor",
-    "version:major": "node update-version.js major",
-    "build:deploy:patch": "node build-and-deploy.js patch --clean",
-    "build:deploy:minor": "node build-and-deploy.js minor --clean",
-    "build:deploy:major": "node build-and-deploy.js major --clean",
     "cleanup": "node cleanup-apks.js",
     "cleanup:all": "node cleanup-apks.js all",
     "cleanup:stats": "node cleanup-apks.js stats",

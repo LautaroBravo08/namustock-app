@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Script de release automático completo
- * Hace TODO: build, commit, tag, push, GitHub release
+ * Script de release automático completo y simplificado
+ * Hace TODO: actualiza versiones, build, APK, commit, tag, push, GitHub release
  * Uso: node auto-release.js [patch|minor|major]
  */
 
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
 // Colores para la consola
@@ -41,15 +42,128 @@ function logInfo(message) {
 }
 
 // Ejecutar comando con logging
-function execCommand(command, description) {
+function execCommand(command, description, options = {}) {
   try {
     logInfo(`Ejecutando: ${description}`);
-    const result = execSync(command, { encoding: 'utf8', stdio: 'pipe' });
+    const result = execSync(command, { 
+      encoding: 'utf8', 
+      stdio: options.silent ? 'pipe' : 'inherit',
+      ...options 
+    });
     logSuccess(`${description} completado`);
     return result;
   } catch (error) {
     logError(`Error en ${description}: ${error.message}`);
     throw error;
+  }
+}
+
+// Limpiar archivos antiguos
+function cleanOldFiles() {
+  logInfo('Limpiando archivos antiguos...');
+  
+  const filesToClean = [
+    'build',
+    'android/app/build',
+    'android/build',
+    'dist'
+  ];
+  
+  filesToClean.forEach(file => {
+    if (fs.existsSync(file)) {
+      try {
+        execSync(`rmdir /s /q "${file}"`, { stdio: 'pipe' });
+        logSuccess(`${file} eliminado`);
+      } catch (error) {
+        logInfo(`No se pudo eliminar ${file} (puede no existir)`);
+      }
+    }
+  });
+  
+  // Limpiar APKs antiguos del directorio de releases (mantener solo 3)
+  const releasesDir = 'releases';
+  if (fs.existsSync(releasesDir)) {
+    const files = fs.readdirSync(releasesDir);
+    const apkFiles = files
+      .filter(file => file.endsWith('.apk'))
+      .map(file => ({
+        name: file,
+        path: path.join(releasesDir, file),
+        stats: fs.statSync(path.join(releasesDir, file))
+      }))
+      .sort((a, b) => b.stats.mtime - a.stats.mtime);
+    
+    if (apkFiles.length > 3) {
+      const toDelete = apkFiles.slice(3);
+      toDelete.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+          logSuccess(`APK antiguo eliminado: ${file.name}`);
+        } catch (error) {
+          logInfo(`No se pudo eliminar ${file.name}`);
+        }
+      });
+    }
+  }
+}
+
+// Actualizar versiones en todos los archivos
+function updateVersionInFiles(newVersion) {
+  logInfo('Actualizando versión en archivos...');
+  
+  // Actualizar package.json
+  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  packageJson.version = newVersion;
+  fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2));
+  logSuccess('package.json actualizado');
+  
+  // Actualizar version.json
+  const versionPath = 'public/version.json';
+  const versionData = {
+    version: newVersion,
+    buildDate: new Date().toISOString(),
+    platform: 'android',
+    features: [
+      'Sistema de inventario completo',
+      'Gestión de ventas optimizada',
+      'Actualizaciones automáticas in-app',
+      'Limpieza automática de archivos antiguos',
+      'Notificaciones mejoradas',
+      'Interfaz de usuario actualizada'
+    ],
+    releaseNotes: `Versión ${newVersion} con actualizaciones automáticas mejoradas y limpieza de archivos antiguos`,
+    downloads: {
+      android: `https://github.com/LautaroBravo08/namustock-app/releases/download/v${newVersion}/namustock-${newVersion}.apk`,
+      ios: `https://github.com/LautaroBravo08/namustock-app/releases/download/v${newVersion}/namustock-${newVersion}.ipa`
+    },
+    baseUrl: 'https://github.com/LautaroBravo08/namustock-app'
+  };
+  
+  fs.writeFileSync(versionPath, JSON.stringify(versionData, null, 2));
+  logSuccess('version.json actualizado');
+  
+  // Actualizar .env.production
+  const envProductionPath = '.env.production';
+  if (fs.existsSync(envProductionPath)) {
+    let envContent = fs.readFileSync(envProductionPath, 'utf8');
+    envContent = envContent.replace(
+      /REACT_APP_VERSION=[\d.]+/,
+      `REACT_APP_VERSION=${newVersion}`
+    );
+    fs.writeFileSync(envProductionPath, envContent);
+    logSuccess('.env.production actualizado');
+  }
+  
+  // Actualizar .env.local
+  const envLocalPath = '.env.local';
+  if (fs.existsSync(envLocalPath)) {
+    let envContent = fs.readFileSync(envLocalPath, 'utf8');
+    envContent = envContent.replace(
+      /REACT_APP_VERSION=[\d.]+/,
+      `REACT_APP_VERSION=${newVersion}`
+    );
+    fs.writeFileSync(envLocalPath, envContent);
+    logSuccess('.env.local actualizado');
   }
 }
 
@@ -91,19 +205,47 @@ async function main() {
     logInfo(`Versión actual: ${currentVersion}`);
     logInfo(`Nueva versión: ${newVersion}`);
     
-    // 4. Build y deploy
-    logStep('🔨', 'Construyendo aplicación...');
-    execCommand(`node build-and-deploy.js ${versionType} --clean --auto`, 'Build y deploy automático');
+    // 4. Limpiar archivos antiguos
+    logStep('🧹', 'Limpiando archivos antiguos...');
+    cleanOldFiles();
     
-    // 5. Verificar que el APK se generó
-    const apkPath = `releases/namustock-${newVersion}.apk`;
-    if (!fs.existsSync(apkPath)) {
-      throw new Error(`APK no encontrado: ${apkPath}`);
+    // 5. Actualizar versiones en archivos
+    logStep('📝', 'Actualizando versiones...');
+    updateVersionInFiles(newVersion);
+    
+    // 6. Construir aplicación
+    logStep('🔨', 'Construyendo aplicación...');
+    
+    // Build de React
+    execCommand('npm run build', 'Construcción de React');
+    
+    // Sincronizar con Capacitor
+    execCommand('npx cap sync', 'Sincronización de Capacitor');
+    
+    // Construir APK de Android
+    logInfo('Construyendo APK de Android...');
+    execCommand('.\\gradlew clean', 'Limpieza de Android', { cwd: 'android' });
+    execCommand('.\\gradlew assembleRelease', 'Construcción de APK', { cwd: 'android' });
+    
+    // 7. Copiar APK a directorio de releases
+    logStep('📦', 'Copiando APK...');
+    const releasesDir = 'releases';
+    if (!fs.existsSync(releasesDir)) {
+      fs.mkdirSync(releasesDir);
     }
+    
+    const sourceApk = 'android/app/build/outputs/apk/release/app-release.apk';
+    const apkPath = `releases/namustock-${newVersion}.apk`;
+    
+    if (!fs.existsSync(sourceApk)) {
+      throw new Error(`APK fuente no encontrado: ${sourceApk}`);
+    }
+    
+    fs.copyFileSync(sourceApk, apkPath);
     
     const stats = fs.statSync(apkPath);
     const sizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
-    logSuccess(`APK verificado: ${apkPath} (${sizeInMB} MB)`);
+    logSuccess(`APK copiado: ${apkPath} (${sizeInMB} MB)`);
     
     // 6. Git add, commit y tag
     logStep('📝', 'Creando commit y tag...');
