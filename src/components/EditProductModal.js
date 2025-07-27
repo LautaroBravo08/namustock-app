@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Trash2 } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { optimizeProductImage } from '../utils/imageOptimizer';
 
 const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState(null);
@@ -60,58 +61,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Sistema de imágenes optimizado
-  const compressImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
 
-      img.onload = () => {
-        // Calcular dimensiones optimizadas
-        const maxWidth = 600;
-        const maxHeight = 450;
-        let { width, height } = img;
-
-        // Mantener proporción
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Configurar calidad de renderizado
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Comprimir con calidad balanceada
-        let quality = 0.8;
-        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-
-        // Reducir calidad si es muy grande (máximo 150KB por imagen)
-        const maxSize = 150 * 1024;
-        while (compressedDataUrl.length * 0.75 > maxSize && quality > 0.3) {
-          quality -= 0.1;
-          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        }
-
-        resolve(compressedDataUrl);
-      };
-
-      img.onerror = () => reject(new Error('Error al cargar la imagen'));
-      img.src = URL.createObjectURL(file);
-    });
-  };
 
   const handleImageUpload = () => {
     if (!formData.imageUrls || formData.imageUrls.length >= 3) {
@@ -122,28 +72,62 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
   };
 
   const handleFileChange = async (event) => {
+    console.log('🔍 DEBUG: Iniciando handleFileChange');
+    
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+      console.log('🔍 DEBUG: No hay archivo seleccionado');
+      return;
+    }
+
+    console.log('🔍 DEBUG: Archivo seleccionado:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      lastModified: file.lastModified
+    });
 
     // Validaciones
     if (!file.type.startsWith('image/')) {
+      console.log('🔍 DEBUG: Archivo no es imagen, tipo:', file.type);
       alert('Por favor selecciona solo archivos de imagen');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) { // 10MB máximo
+      console.log('🔍 DEBUG: Archivo muy grande:', file.size);
       alert('La imagen es demasiado grande. Máximo 10MB permitido.');
       return;
     }
 
+    console.log('🔍 DEBUG: Validaciones pasadas, iniciando compresión...');
+
     try {
-      const compressedImage = await compressImage(file);
-      const newImages = [...(formData.imageUrls || []), compressedImage];
+      console.log('🔍 DEBUG: Llamando a optimizeProductImage...');
+      const optimizedResult = await optimizeProductImage(file);
+      
+      console.log('🔍 DEBUG: Imagen optimizada exitosamente:', {
+        originalSize: optimizedResult.originalSize,
+        optimizedSize: optimizedResult.optimizedSize,
+        dataUrlLength: optimizedResult.dataUrl.length,
+        dimensions: optimizedResult.dimensions,
+        format: optimizedResult.format
+      });
+      
+      const newImages = [...(formData.imageUrls || []), optimizedResult.dataUrl];
+      console.log('🔍 DEBUG: Actualizando estado con nuevas imágenes:', newImages.length);
+      
       setFormData(prev => ({ ...prev, imageUrls: newImages }));
       console.log('✅ Imagen agregada exitosamente');
     } catch (error) {
-      console.error('Error procesando imagen:', error);
-      alert('Error al procesar la imagen');
+      console.error('❌ ERROR DETALLADO procesando imagen:', {
+        message: error.message,
+        stack: error.stack,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      });
+      alert(`Error al procesar la imagen: ${error.message}`);
     }
 
     // Limpiar input
@@ -267,8 +251,8 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
               onClick={handleImageUpload}
               disabled={formData.imageUrls && formData.imageUrls.length >= 3}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${formData.imageUrls && formData.imageUrls.length >= 3
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  : 'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)]'
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)]'
                 }`}
             >
               <Upload className="h-4 w-4" />
