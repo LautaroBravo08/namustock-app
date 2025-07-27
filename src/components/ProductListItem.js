@@ -1,10 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { useRandomGlow } from '../hooks/useRandomGlow';
 import { roundUpToMultiple, formatNumber } from '../utils/helpers';
+import { getProductImage } from '../firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 
 const ProductListItem = ({ product, addToCart, themeType, roundingMultiple, allowDecimals }) => {
   const { isGlowActive, animationDelay } = useRandomGlow(themeType === 'dark');
+  const [firstImageUrl, setFirstImageUrl] = useState('');
+  const [user] = useAuthState(auth);
+
+  // Cargar la primera imagen desde Firestore usando la nueva arquitectura
+  useEffect(() => {
+    const loadFirstImage = async () => {
+      if (!user || !product.imageIds || product.imageIds.length === 0) {
+        // Si no hay imageIds, usar imageUrls como fallback para compatibilidad
+        setFirstImageUrl(product.imageUrls && product.imageUrls[0] ? product.imageUrls[0] : '');
+        return;
+      }
+
+      try {
+        const { imageData, error } = await getProductImage(user.uid, product.imageIds[0]);
+        if (error) {
+          console.error('Error cargando primera imagen del producto:', error);
+          setFirstImageUrl('');
+        } else {
+          setFirstImageUrl(imageData || '');
+        }
+      } catch (error) {
+        console.error('Error cargando imagen:', error);
+        setFirstImageUrl('');
+      }
+    };
+
+    loadFirstImage();
+  }, [user, product.imageIds, product.imageUrls]);
 
   return (
     <div 
@@ -13,7 +44,7 @@ const ProductListItem = ({ product, addToCart, themeType, roundingMultiple, allo
     >
       <img 
         className="w-16 h-16 object-cover rounded-md flex-shrink-0" 
-        src={product.imageUrls[0] || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'} 
+        src={firstImageUrl || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'} 
         alt={product.name} 
         onError={(e) => { 
           e.target.onerror = null; 

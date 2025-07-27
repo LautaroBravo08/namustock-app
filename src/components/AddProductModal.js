@@ -1,7 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { X, Plus, Upload, Trash2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { X, Plus } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { useImageHandler } from '../hooks/useImageHandler';
 import { roundUpToMultiple, formatNumber } from '../utils/helpers';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
+import ImageUploader from './ImageUploader';
 
 const AddProductModal = ({ 
   isOpen, 
@@ -11,20 +16,29 @@ const AddProductModal = ({
   roundingMultiple, 
   allowDecimals 
 }) => {
-  const [newItem, setNewItem] = useState({ 
+  const [user] = useAuthState(auth);
+  const { formData, handleChange, resetForm } = useFormValidation({ 
     name: '', 
     quantity: '', 
     totalCost: '', 
-    expiryDate: '',
-    imageUrls: []
+    expiryDate: ''
   });
-  const fileInputRef = useRef(null);
+  
+  const { 
+    imageData, 
+    loadingImages, 
+    addImage, 
+    removeImage, 
+    clearImages, 
+    getImageIds, 
+    canAddMore 
+  } = useImageHandler(user, 3);
   
   useBodyScrollLock(isOpen);
 
   const calculatedValues = useMemo(() => {
-    const quantity = parseFloat(newItem.quantity);
-    const totalCost = parseFloat(newItem.totalCost);
+    const quantity = parseFloat(formData.quantity);
+    const totalCost = parseFloat(formData.totalCost);
     
     if (quantity > 0 && totalCost > 0) {
       const unitCost = totalCost / quantity;
@@ -32,192 +46,28 @@ const AddProductModal = ({
       return { unitCost: unitCost, finalPrice };
     }
     return { unitCost: 0, finalPrice: 0 };
-  }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
-
-  // Función simple y robusta para procesar imágenes (idéntica al EditProductModal)
-  const processImage = (file) => {
-    return new Promise((resolve, reject) => {
-      console.log('🔍 DEBUG processImage: Iniciando procesamiento simple');
-      
-      try {
-        const img = new Image();
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          reject(new Error('No se pudo crear contexto de canvas'));
-          return;
-        }
-
-        const originalOnLoad = () => {
-          console.log('🔍 DEBUG processImage: Imagen cargada:', {
-            width: img.width,
-            height: img.height
-          });
-
-          try {
-            // Calcular dimensiones (máximo 600x450)
-            let { width, height } = img;
-            const maxWidth = 600;
-            const maxHeight = 450;
-
-            if (width > maxWidth || height > maxHeight) {
-              const ratio = Math.min(maxWidth / width, maxHeight / height);
-              width = Math.floor(width * ratio);
-              height = Math.floor(height * ratio);
-            }
-
-            console.log('🔍 DEBUG processImage: Nuevas dimensiones:', { width, height });
-
-            // Configurar canvas
-            canvas.width = width;
-            canvas.height = height;
-
-            // Dibujar imagen
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convertir a base64 con compresión
-            let quality = 0.8;
-            let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-            // Reducir calidad si es muy grande (máximo 200KB)
-            const maxSize = 200 * 1024;
-            while (dataUrl.length * 0.75 > maxSize && quality > 0.3) {
-              quality -= 0.1;
-              dataUrl = canvas.toDataURL('image/jpeg', quality);
-            }
-
-            console.log('🔍 DEBUG processImage: Procesamiento completado:', {
-              finalQuality: quality,
-              dataUrlLength: dataUrl.length,
-              estimatedSizeKB: Math.round(dataUrl.length * 0.75 / 1024)
-            });
-
-            resolve(dataUrl);
-          } catch (canvasError) {
-            console.error('❌ DEBUG processImage: Error en canvas:', canvasError);
-            reject(new Error(`Error procesando imagen: ${canvasError.message}`));
-          }
-        };
-
-        img.onload = originalOnLoad;
-        img.onerror = (error) => {
-          console.error('❌ DEBUG processImage: Error cargando imagen:', error);
-          reject(new Error('Error al cargar la imagen'));
-        };
-
-        // Usar URL.createObjectURL en lugar de FileReader
-        console.log('🔍 DEBUG processImage: Creando URL del objeto...');
-        const objectUrl = URL.createObjectURL(file);
-        img.src = objectUrl;
-
-        // Limpiar URL después de un tiempo
-        setTimeout(() => {
-          URL.revokeObjectURL(objectUrl);
-        }, 1000);
-
-      } catch (error) {
-        console.error('❌ DEBUG processImage: Error general:', error);
-        reject(new Error(`Error general: ${error.message}`));
-      }
-    });
-  };
-
-
-
-  const handleImageUpload = () => {
-    if (newItem.imageUrls.length >= 3) {
-      alert('Máximo 3 imágenes permitidas por producto');
-      return;
-    }
-    fileInputRef.current.click();
-  };
-
-  const handleFileChange = async (event) => {
-    console.log('🔍 DEBUG: Iniciando handleFileChange');
-    
-    const file = event.target.files[0];
-    if (!file) {
-      console.log('🔍 DEBUG: No hay archivo seleccionado');
-      return;
-    }
-
-    console.log('🔍 DEBUG: Archivo seleccionado:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified
-    });
-
-    // Validaciones
-    if (!file.type.startsWith('image/')) {
-      console.log('🔍 DEBUG: Archivo no es imagen, tipo:', file.type);
-      alert('Por favor selecciona solo archivos de imagen');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB máximo
-      console.log('🔍 DEBUG: Archivo muy grande:', file.size);
-      alert('La imagen es demasiado grande. Máximo 10MB permitido.');
-      return;
-    }
-
-    console.log('🔍 DEBUG: Validaciones pasadas, iniciando compresión...');
-
-    try {
-      console.log('🔍 DEBUG: Llamando a processImage...');
-      const processedDataUrl = await processImage(file);
-      
-      console.log('🔍 DEBUG: Imagen procesada exitosamente:', {
-        originalSize: file.size,
-        dataUrlLength: processedDataUrl.length,
-        estimatedSizeKB: Math.round(processedDataUrl.length * 0.75 / 1024)
-      });
-      
-      const newImages = [...newItem.imageUrls, processedDataUrl];
-      console.log('🔍 DEBUG: Actualizando estado con nuevas imágenes:', newImages.length);
-      
-      setNewItem(prev => ({ ...prev, imageUrls: newImages }));
-      console.log('✅ Imagen agregada exitosamente');
-    } catch (error) {
-      console.error('❌ ERROR DETALLADO procesando imagen:', {
-        message: error.message,
-        stack: error.stack,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size
-      });
-      alert(`Error al procesar la imagen: ${error.message}`);
-    }
-
-    // Limpiar input
-    event.target.value = '';
-  };
-
-  const removeImage = (index) => {
-    const newImages = newItem.imageUrls.filter((_, i) => i !== index);
-    setNewItem(prev => ({ ...prev, imageUrls: newImages }));
-  };
+  }, [formData.quantity, formData.totalCost, profitMargin, roundingMultiple]);
 
   const handleAdd = (e) => {
     e.preventDefault();
-    if (newItem.name && newItem.quantity > 0 && newItem.totalCost > 0) {
-      const quantity = parseFloat(newItem.quantity);
-      const totalCost = parseFloat(newItem.totalCost);
+    if (formData.name && formData.quantity > 0 && formData.totalCost > 0) {
+      const quantity = parseFloat(formData.quantity);
+      const totalCost = parseFloat(formData.totalCost);
       const unitCost = totalCost / quantity;
       const price = roundUpToMultiple(unitCost * (1 + profitMargin / 100), roundingMultiple);
 
       onAddToReview({ 
         id: Date.now(),
-        name: newItem.name,
-        quantity: newItem.quantity,
+        name: formData.name,
+        quantity: formData.quantity,
         cost: unitCost.toFixed(2),
         price: price,
-        expiryDate: newItem.expiryDate || null,
-        imageUrls: newItem.imageUrls || []
+        expiryDate: formData.expiryDate || null,
+        imageIds: getImageIds()
       });
       
-      setNewItem({ name: '', quantity: '', totalCost: '', expiryDate: '', imageUrls: [] });
+      resetForm({ name: '', quantity: '', totalCost: '', expiryDate: '' });
+      clearImages();
       onClose();
     }
   };
@@ -242,14 +92,10 @@ const AddProductModal = ({
               </label>
               <input 
                 type="text" 
+                name="name"
                 id="name" 
-                value={newItem.name} 
-                onChange={e => {
-                  const value = e.target.value;
-                  if (value.length <= 40) {
-                    setNewItem({...newItem, name: value});
-                  }
-                }} 
+                value={formData.name} 
+                onChange={handleChange}
                 className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
                 placeholder='Ej: Smartwatch Pro (máx. 40 caracteres)' 
                 maxLength="40"
@@ -264,31 +110,10 @@ const AddProductModal = ({
                 </label>
                 <input 
                   type="number" 
+                  name="quantity"
                   id="quantity" 
-                  value={newItem.quantity} 
-                  onChange={e => {
-                    const value = e.target.value;
-                    // Solo permitir números, puntos decimales y signos negativos
-                    const numericRegex = /^-?\d*\.?\d*$/;
-                    if (numericRegex.test(value) || value === '') {
-                      // Limitar a máximo 8 dígitos en la parte entera
-                      const cleanValue = value.replace(/[^0-9.]/g, '');
-                      const parts = cleanValue.split('.');
-                      if (parts[0] && parts[0].length > 8) {
-                        return; // No permitir más de 8 dígitos en la parte entera
-                      }
-                      
-                      // Limitar decimales a máximo 2
-                      if (value.includes('.')) {
-                        const parts = value.split('.');
-                        if (parts[1] && parts[1].length <= 2) {
-                          setNewItem({...newItem, quantity: value});
-                        }
-                      } else {
-                        setNewItem({...newItem, quantity: value});
-                      }
-                    }
-                  }} 
+                  value={formData.quantity} 
+                  onChange={handleChange}
                   className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
                   placeholder='Ej: 50' 
                   step="0.01"
@@ -301,31 +126,10 @@ const AddProductModal = ({
                 </label>
                 <input 
                   type="number" 
+                  name="totalCost"
                   id="totalCost" 
-                  value={newItem.totalCost} 
-                  onChange={e => {
-                    const value = e.target.value;
-                    // Solo permitir números, puntos decimales y signos negativos
-                    const numericRegex = /^-?\d*\.?\d*$/;
-                    if (numericRegex.test(value) || value === '') {
-                      // Limitar a máximo 8 dígitos en la parte entera
-                      const cleanValue = value.replace(/[^0-9.]/g, '');
-                      const parts = cleanValue.split('.');
-                      if (parts[0] && parts[0].length > 8) {
-                        return; // No permitir más de 8 dígitos en la parte entera
-                      }
-                      
-                      // Limitar decimales a máximo 2
-                      if (value.includes('.')) {
-                        const parts = value.split('.');
-                        if (parts[1] && parts[1].length <= 2) {
-                          setNewItem({...newItem, totalCost: value});
-                        }
-                      } else {
-                        setNewItem({...newItem, totalCost: value});
-                      }
-                    }
-                  }} 
+                  value={formData.totalCost} 
+                  onChange={handleChange}
                   className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
                   placeholder='Ej: 7500' 
                   step="0.01"
@@ -340,74 +144,24 @@ const AddProductModal = ({
               </label>
               <input 
                 type="date" 
+                name="expiryDate"
                 id="expiryDate" 
-                value={newItem.expiryDate} 
-                onChange={e => setNewItem({...newItem, expiryDate: e.target.value})} 
+                value={formData.expiryDate} 
+                onChange={handleChange}
                 min={new Date().toISOString().split('T')[0]}
                 className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
               />
             </div>
 
             {/* Sección de Imágenes */}
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)]">
-                Imágenes del Producto (Máximo 3)
-              </label>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                className="hidden" 
-                accept="image/*" 
-              />
-
-              {/* Botón para subir imagen */}
-              <button
-                type="button"
-                onClick={handleImageUpload}
-                disabled={newItem.imageUrls.length >= 3}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  newItem.imageUrls.length >= 3
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'bg-[var(--color-primary)] text-[var(--color-primary-text)] hover:bg-[var(--color-primary-hover)]'
-                }`}
-              >
-                <Upload className="h-4 w-4" />
-                {newItem.imageUrls.length >= 3 
-                  ? 'Máximo 3 imágenes' 
-                  : `Subir Imagen (${newItem.imageUrls.length}/3)`
-                }
-              </button>
-
-              {/* Galería de imágenes */}
-              {newItem.imageUrls.length > 0 && (
-                <div className="grid grid-cols-3 gap-3">
-                  {newItem.imageUrls.map((imageUrl, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={imageUrl}
-                        alt={`Producto ${index + 1}`}
-                        className="w-full h-20 object-cover rounded-lg border border-[var(--color-border)]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        title="Eliminar imagen"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Información sobre las imágenes */}
-              <div className="text-xs text-[var(--color-text-secondary)] bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                <strong>📸 Sistema optimizado:</strong> Máximo 3 imágenes por producto. Se comprimen automáticamente a 600x450px con calidad balanceada, máximo 150KB cada una para garantizar sincronización con la base de datos.
-              </div>
-            </div>
+            <ImageUploader
+              imageData={imageData}
+              onAddImage={addImage}
+              onRemoveImage={removeImage}
+              maxImages={3}
+              loadingImages={loadingImages}
+              canAddMore={canAddMore}
+            />
             
             <div className="text-center p-4 bg-[var(--color-bg)] rounded-lg">
               <div className="flex justify-around">

@@ -23,26 +23,42 @@ class UpdateService {
     });
   }
 
-  // Obtener versión actual - FORZAR HARDCODEADO
+  // Obtener versión actual
   getCurrentVersionFromPackage() {
-    // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.0.66'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    // Usar versión del package.json como fuente de verdad
+    const packageVersion = process.env.REACT_APP_VERSION || '1.0.66';
     
-    console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
-    console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
+    console.log('📦 Versión actual:', packageVersion);
     
-    return hardcodedVersion;
+    return packageVersion;
   }
 
-  // Inicializar versión instalada - SIMPLIFICADO
+  // Inicializar versión instalada - MEJORADO
   initializeInstalledVersion() {
     console.log('🚀 Inicializando sistema de versiones...');
 
-    // Limpiar TODOS los datos de versiones anteriores
-    localStorage.removeItem('installed-app-version');
-    localStorage.removeItem('last-checked-version');
-    localStorage.removeItem('app-version');
+    // Limpiar TODOS los datos de versiones anteriores para evitar conflictos
+    const keysToRemove = [
+      'installed-app-version',
+      'last-checked-version',
+      'app-version',
+      'namustock-version',
+      'version',
+      'update-info',
+      'last-update-check'
+    ];
+    
+    keysToRemove.forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value) {
+        console.log(`🗑️ Limpiando cache obsoleto: ${key} = ${value}`);
+        localStorage.removeItem(key);
+      }
+    });
 
+    // Establecer la versión actual como instalada
+    localStorage.setItem('current-app-version', this.currentVersion);
+    
     console.log('✅ Sistema de versiones limpio. Versión actual:', this.currentVersion);
   }
 
@@ -167,12 +183,27 @@ class UpdateService {
     return { available: false, platform: 'electron' };
   }
 
-  // Verificar actualizaciones para móvil
+  // Verificar actualizaciones para móvil - MEJORADO
   async checkMobileUpdate() {
     try {
       const platform = Capacitor.getPlatform();
       console.log(`🔍 Verificando actualizaciones para ${platform}...`);
-      console.log(`📱 Versión actual: ${this.currentVersion}`);
+      console.log(`📱 Versión actual del código: ${this.currentVersion}`);
+
+      // Verificar si está en modo simulación
+      const simulateUpdate = process.env.REACT_APP_SIMULATE_UPDATE === 'true';
+      if (simulateUpdate) {
+        console.log('🧪 MODO SIMULACIÓN ACTIVADO - Forzando actualización disponible');
+        return {
+          available: true,
+          version: '1.1.0',
+          currentVersion: this.currentVersion,
+          platform: platform,
+          downloadUrl: '/downloads/app-release-1.1.0.apk',
+          releaseNotes: 'Versión de prueba - Simulación de actualización automática',
+          isSimulated: true
+        };
+      }
 
       // SOLO verificar desde GitHub (fuente única de verdad)
       const githubRepo = process.env.REACT_APP_GITHUB_REPO;
@@ -181,36 +212,54 @@ class UpdateService {
         return { available: false, platform: platform };
       }
 
-      // Intentar múltiples métodos para obtener la información del release
+      // Intentar obtener información del release desde GitHub
       let release = null;
       
       try {
-        // Método 1: API de GitHub
-        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
+        console.log(`🌐 Consultando GitHub API: https://api.github.com/repos/${githubRepo}/releases/latest`);
+        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'NamuStock-App-UpdateChecker'
+          }
+        });
+        
         if (response.ok) {
           release = await response.json();
           console.log('✅ Información obtenida desde GitHub API');
+          console.log(`📦 Release encontrado: ${release.tag_name} (${release.name})`);
+        } else {
+          console.log(`❌ GitHub API respondió con error: ${response.status} ${response.statusText}`);
         }
       } catch (apiError) {
-        console.log('⚠️ GitHub API falló, intentando método alternativo');
+        console.log('⚠️ GitHub API falló:', apiError.message);
       }
 
-      // Método 2: Si la API falla, mostrar error
+      // Si no se pudo obtener información del release, no hay actualización
       if (!release) {
         console.log('❌ No se pudo obtener información del release desde GitHub API');
         return { available: false, platform: platform };
       }
 
       const latestVersion = release.tag_name.replace('v', '');
-      console.log(`🐙 Última versión disponible: ${latestVersion}`);
+      console.log(`🐙 Última versión en GitHub: ${latestVersion}`);
 
-      // Comparar SOLO con la versión actual del código
-      console.log(`🔍 COMPARANDO VERSIONES:`);
-      console.log(`   Disponible: "${latestVersion}"`);
-      console.log(`   Actual: "${this.currentVersion}"`);
-      console.log(`   ¿Es más nueva?: ${this.isNewerVersion(latestVersion, this.currentVersion)}`);
+      // COMPARACIÓN MEJORADA DE VERSIONES
+      console.log(`🔍 COMPARANDO VERSIONES DETALLADAMENTE:`);
+      console.log(`   📱 Versión actual (código): "${this.currentVersion}"`);
+      console.log(`   🐙 Versión disponible (GitHub): "${latestVersion}"`);
+      
+      // Normalizar versiones para comparación
+      const normalizedCurrent = this.normalizeVersion(this.currentVersion);
+      const normalizedLatest = this.normalizeVersion(latestVersion);
+      
+      console.log(`   📊 Versión actual normalizada: [${normalizedCurrent.join(', ')}]`);
+      console.log(`   📊 Versión disponible normalizada: [${normalizedLatest.join(', ')}]`);
+      
+      const isNewer = this.compareVersionArrays(normalizedLatest, normalizedCurrent);
+      console.log(`   🔍 ¿Es más nueva?: ${isNewer}`);
 
-      if (this.isNewerVersion(latestVersion, this.currentVersion)) {
+      if (isNewer) {
         console.log(`✅ Nueva versión disponible: ${latestVersion}`);
         
         const downloadUrl = this.getMobileDownloadUrl(release);
@@ -223,17 +272,44 @@ class UpdateService {
           platform: platform,
           downloadUrl: downloadUrl,
           releaseNotes: release.body || 'Nueva versión disponible',
-          release: release // Incluir información completa del release
+          release: release,
+          publishedAt: release.published_at
         };
       }
 
-      console.log('✅ Ya tienes la última versión');
-      return { available: false, platform: platform };
+      console.log('✅ Ya tienes la última versión - No hay actualizaciones disponibles');
+      return { available: false, platform: platform, latestVersion: latestVersion };
 
     } catch (error) {
       console.error('❌ Error verificando actualizaciones:', error);
-      return { available: false, platform: Capacitor.getPlatform() };
+      return { available: false, platform: Capacitor.getPlatform(), error: error.message };
     }
+  }
+
+  // Normalizar versión a array de números para comparación precisa
+  normalizeVersion(version) {
+    return version.split('.').map(part => {
+      const num = parseInt(part, 10);
+      return isNaN(num) ? 0 : num;
+    });
+  }
+
+  // Comparar arrays de versión de manera precisa
+  compareVersionArrays(newVersionArray, currentVersionArray) {
+    const maxLength = Math.max(newVersionArray.length, currentVersionArray.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      const newPart = newVersionArray[i] || 0;
+      const currentPart = currentVersionArray[i] || 0;
+      
+      if (newPart > currentPart) {
+        return true;
+      } else if (newPart < currentPart) {
+        return false;
+      }
+    }
+    
+    return false; // Son iguales
   }
 
 

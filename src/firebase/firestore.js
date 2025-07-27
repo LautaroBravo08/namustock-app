@@ -229,6 +229,72 @@ export const getUserSettings = async (userId) => {
   }
 };
 
+// Funciones para manejar imágenes de productos por separado
+export const saveProductImage = async (userId, imageData) => {
+  try {
+    console.log('🔥 Guardando imagen en Firestore...');
+    const imageRef = await addDoc(collection(db, 'users', userId, 'productImages'), {
+      imageData: imageData,
+      createdAt: new Date().toISOString(),
+      size: imageData.length
+    });
+    
+    console.log('✅ Imagen guardada con ID:', imageRef.id);
+    return { imageId: imageRef.id, error: null };
+  } catch (error) {
+    console.error('❌ Error guardando imagen:', error);
+    return { imageId: null, error: error.message };
+  }
+};
+
+export const getProductImage = async (userId, imageId) => {
+  try {
+    const imageRef = doc(db, 'users', userId, 'productImages', imageId);
+    const imageSnap = await getDoc(imageRef);
+    
+    if (imageSnap.exists()) {
+      return { imageData: imageSnap.data().imageData, error: null };
+    } else {
+      return { imageData: null, error: 'Imagen no encontrada' };
+    }
+  } catch (error) {
+    return { imageData: null, error: error.message };
+  }
+};
+
+export const deleteProductImage = async (userId, imageId) => {
+  try {
+    await deleteDoc(doc(db, 'users', userId, 'productImages', imageId));
+    console.log('✅ Imagen eliminada:', imageId);
+    return { error: null };
+  } catch (error) {
+    console.error('❌ Error eliminando imagen:', error);
+    return { error: error.message };
+  }
+};
+
+export const getMultipleProductImages = async (userId, imageIds) => {
+  try {
+    if (!imageIds || imageIds.length === 0) {
+      return { images: [], error: null };
+    }
+
+    const imagePromises = imageIds.map(async (imageId) => {
+      const result = await getProductImage(userId, imageId);
+      return {
+        id: imageId,
+        data: result.imageData,
+        error: result.error
+      };
+    });
+
+    const images = await Promise.all(imagePromises);
+    return { images, error: null };
+  } catch (error) {
+    return { images: [], error: error.message };
+  }
+};
+
 // Funciones para manejar imágenes en Firebase Storage
 export const uploadProductImage = async (userId, productId, file, imageIndex) => {
   try {
@@ -251,19 +317,7 @@ export const uploadProductImage = async (userId, productId, file, imageIndex) =>
   }
 };
 
-export const deleteProductImage = async (imageUrl) => {
-  try {
-    // Extraer la referencia de la URL
-    const imageRef = ref(storage, imageUrl);
-    await deleteObject(imageRef);
-    
-    console.log('✅ Imagen eliminada exitosamente:', imageUrl);
-    return { error: null };
-  } catch (error) {
-    console.error('❌ Error eliminando imagen:', error);
-    return { error: error.message };
-  }
-};
+
 
 // Función helper para convertir File a Blob optimizado
 export const optimizeImageFile = (file, maxWidth = 1200, maxHeight = 900, quality = 0.8) => {

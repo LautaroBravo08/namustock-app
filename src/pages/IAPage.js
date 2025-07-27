@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Mic, 
   Image as ImageIcon, 
@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { useRandomGlow } from '../hooks/useRandomGlow';
 import { formatNumber, roundUpToMultiple, getDaysUntilExpiry } from '../utils/helpers';
+import { getProductImage } from '../firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EditProductModal from '../components/EditProductModal';
 import VoiceAIModal from '../components/VoiceAIModal';
@@ -43,6 +46,48 @@ const IAPage = ({
 
   const { isGlowActive: isGlowActive2 } = useRandomGlow(themeType === 'dark');
   const { isGlowActive: isGlowActive3 } = useRandomGlow(themeType === 'dark');
+  const [user] = useAuthState(auth);
+  const [productImages, setProductImages] = useState({});
+
+  // Cargar imágenes de productos para el inventario
+  useEffect(() => {
+    const loadProductImages = async () => {
+      if (!user || !products.length) return;
+
+      const imagePromises = products.map(async (product) => {
+        if (!product.imageIds || product.imageIds.length === 0) {
+          // Fallback a imageUrls para compatibilidad
+          return {
+            productId: product.id,
+            imageUrl: product.imageUrls && product.imageUrls[0] ? product.imageUrls[0] : ''
+          };
+        }
+
+        try {
+          const { imageData, error } = await getProductImage(user.uid, product.imageIds[0]);
+          return {
+            productId: product.id,
+            imageUrl: error ? '' : (imageData || '')
+          };
+        } catch (error) {
+          console.error('Error cargando imagen del producto:', error);
+          return {
+            productId: product.id,
+            imageUrl: ''
+          };
+        }
+      });
+
+      const results = await Promise.all(imagePromises);
+      const imageMap = {};
+      results.forEach(({ productId, imageUrl }) => {
+        imageMap[productId] = imageUrl;
+      });
+      setProductImages(imageMap);
+    };
+
+    loadProductImages();
+  }, [user, products]);
 
   const filteredAndSortedInventory = useMemo(() => {
     const filtered = products.filter(p => 
@@ -119,7 +164,7 @@ const IAPage = ({
         cost: parseFloat(item.cost),
         price: parseFloat(item.price) || roundUpToMultiple(parseFloat(item.cost) * (1 + profitMargin / 100), roundingMultiple),
         category: 'Nuevo',
-        imageUrls: [`https://placehold.co/400x400/7f8c8d/ffffff?text=${encodeURIComponent(item.name)}`, '', ''],
+        imageIds: item.imageIds || [],
         expiryDate: item.expiryDate || null,
       };
       handleAddProduct(newProduct);
@@ -300,9 +345,13 @@ const IAPage = ({
                 <div key={product.id} className={`bg-[var(--color-bg)] p-4 rounded-lg border transition-colors duration-300 ${itemStyle}`}>
                   <div className="flex items-start gap-4">
                     <img 
-                      src={(product.imageUrls && product.imageUrls[0]) || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'} 
+                      src={productImages[product.id] || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'} 
                       alt={product.name} 
                       className="w-16 h-16 rounded-md object-cover flex-shrink-0" 
+                      onError={(e) => { 
+                        e.target.onerror = null; 
+                        e.target.src='https://placehold.co/200x200/cccccc/ffffff?text=Error'; 
+                      }}
                     />
                     <div className="flex-grow min-w-0">
                       <p className="font-bold text-lg text-[var(--color-text-primary)] truncate pr-2" title={product.name}>

@@ -2,11 +2,17 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ShoppingCart, ArrowLeft, ArrowRight } from 'lucide-react';
 import { roundUpToMultiple, formatNumber } from '../utils/helpers';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+import { getMultipleProductImages } from '../firebase/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase/config';
 
 const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDecimals }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageUrls, setImageUrls] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(false);
   const cardRef = useRef(null);
+  const [user] = useAuthState(auth);
   
   // Hook de visibilidad para optimizar animaciones
   const { elementRef: visibilityRef, isVisible, hasBeenVisible } = useIntersectionObserver({
@@ -15,9 +21,38 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
   });
   
   const displayPrice = roundUpToMultiple(product.price, roundingMultiple);
-  const validImageUrls = useMemo(() => 
-    product.imageUrls.filter(url => url), [product.imageUrls]
-  );
+  
+  // Cargar imágenes desde Firestore usando la nueva arquitectura
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!user || !product.imageIds || product.imageIds.length === 0) {
+        // Si no hay imageIds, usar imageUrls como fallback para compatibilidad
+        setImageUrls(product.imageUrls ? product.imageUrls.filter(url => url) : []);
+        return;
+      }
+
+      setLoadingImages(true);
+      try {
+        const { images, error } = await getMultipleProductImages(user.uid, product.imageIds);
+        if (error) {
+          console.error('Error cargando imágenes del producto:', error);
+          setImageUrls([]);
+        } else {
+          const validImages = images.filter(img => img.data && !img.error).map(img => img.data);
+          setImageUrls(validImages);
+        }
+      } catch (error) {
+        console.error('Error cargando imágenes:', error);
+        setImageUrls([]);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    loadImages();
+  }, [user, product.imageIds, product.imageUrls]);
+
+  const validImageUrls = useMemo(() => imageUrls, [imageUrls]);
 
   const nextImage = (e) => {
     e.stopPropagation();
