@@ -1,6 +1,6 @@
 {
-  "version": "1.0.67",
-  "buildDate": "2025-07-27T10:00:10.834Z",
+  "version": "1.0.68",
+  "buildDate": "2025-07-27T10:13:27.363Z",
   "platform": "android",
   "features": [
     "Sistema de inventario completo",
@@ -10,10 +10,10 @@
     "Notificaciones mejoradas",
     "Interfaz de usuario actualizada"
   ],
-  "releaseNotes": "Versión 1.0.67 con actualizaciones automáticas mejoradas y limpieza de archivos antiguos",
+  "releaseNotes": "Versión 1.0.68 con actualizaciones automáticas mejoradas y limpieza de archivos antiguos",
   "downloads": {
-    "android": "/downloads/app-release-1.0.66.apk",
-    "ios": "/downloads/app-release-1.0.66.ipa"
+    "android": "/downloads/app-release-1.0.67.apk",
+    "ios": "/downloads/app-release-1.0.67.ipa"
   },
   "baseUrl": "https://tu-dominio.com"
 }

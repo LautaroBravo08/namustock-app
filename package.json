@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.67",
+  "version": "1.0.68",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -65,7 +65,11 @@
     "android:disable-update": "node test-android-updates.js disable",
     "android:update-version": "node test-android-updates.js version",
     "test:update-system": "node test-update-system.js",
-    "clear-version-cache": "node clear-version-cache.js"
+    "clear-version-cache": "node clear-version-cache.js",
+    "release": "node auto-release.js patch",
+    "release:patch": "node auto-release.js patch",
+    "release:minor": "node auto-release.js minor",
+    "release:major": "node auto-release.js major"
   },
   "eslintConfig": {
     "extends": [
