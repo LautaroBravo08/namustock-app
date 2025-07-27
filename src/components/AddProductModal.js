@@ -34,17 +34,20 @@ const AddProductModal = ({
     return { unitCost: 0, finalPrice: 0 };
   }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
 
-  // Función de compresión inteligente que mantiene buena calidad
-  const compressImageWithQuality = (file, maxWidth = 800, maxHeight = 600, quality = 0.75) => {
-    return new Promise((resolve) => {
+  // Sistema de imágenes optimizado (idéntico al EditProductModal)
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
       
       img.onload = () => {
-        // Calcular nuevas dimensiones manteniendo proporción
+        // Calcular dimensiones optimizadas
+        const maxWidth = 600;
+        const maxHeight = 450;
         let { width, height } = img;
         
+        // Mantener proporción
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -60,31 +63,31 @@ const AddProductModal = ({
         canvas.width = width;
         canvas.height = height;
         
-        // Dibujar imagen con buena calidad
+        // Configurar calidad de renderizado
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
         
         // Comprimir con calidad balanceada
+        let quality = 0.8;
         let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
         
-        // Si es muy grande, reducir calidad gradualmente
-        const maxSizeBytes = 200 * 1024; // 200KB máximo por imagen
-        let currentQuality = quality;
-        
-        while (compressedDataUrl.length * 0.75 > maxSizeBytes && currentQuality > 0.3) {
-          currentQuality -= 0.1;
-          compressedDataUrl = canvas.toDataURL('image/jpeg', currentQuality);
+        // Reducir calidad si es muy grande (máximo 150KB por imagen)
+        const maxSize = 150 * 1024;
+        while (compressedDataUrl.length * 0.75 > maxSize && quality > 0.3) {
+          quality -= 0.1;
+          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
         }
         
         resolve(compressedDataUrl);
       };
       
+      img.onerror = () => reject(new Error('Error al cargar la imagen'));
       img.src = URL.createObjectURL(file);
     });
   };
 
-  const handleUploadClick = () => {
+  const handleImageUpload = () => {
     if (newItem.imageUrls.length >= 3) {
       alert('Máximo 3 imágenes permitidas por producto');
       return;
@@ -96,40 +99,34 @@ const AddProductModal = ({
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
+    // Validaciones
     if (!file.type.startsWith('image/')) {
       alert('Por favor selecciona solo archivos de imagen');
       return;
     }
 
-    // Validate file size (max 15MB)
-    const maxSize = 15 * 1024 * 1024; // 15MB
-    if (file.size > maxSize) {
-      alert('La imagen es demasiado grande. Máximo 15MB permitido.');
+    if (file.size > 10 * 1024 * 1024) { // 10MB máximo
+      alert('La imagen es demasiado grande. Máximo 10MB permitido.');
       return;
     }
 
     try {
-      // Comprimir imagen manteniendo buena calidad
-      const compressedDataUrl = await compressImageWithQuality(file);
-      
-      // Agregar imagen comprimida al array
-      const newImageUrls = [...newItem.imageUrls, compressedDataUrl];
-      setNewItem(prev => ({ ...prev, imageUrls: newImageUrls }));
-      
-      console.log('✅ Imagen procesada exitosamente');
+      const compressedImage = await compressImage(file);
+      const newImages = [...newItem.imageUrls, compressedImage];
+      setNewItem(prev => ({ ...prev, imageUrls: newImages }));
+      console.log('✅ Imagen agregada exitosamente');
     } catch (error) {
       console.error('Error procesando imagen:', error);
       alert('Error al procesar la imagen');
     }
 
-    // Clear input
+    // Limpiar input
     event.target.value = '';
   };
 
   const removeImage = (index) => {
-    const newImageUrls = newItem.imageUrls.filter((_, i) => i !== index);
-    setNewItem(prev => ({ ...prev, imageUrls: newImageUrls }));
+    const newImages = newItem.imageUrls.filter((_, i) => i !== index);
+    setNewItem(prev => ({ ...prev, imageUrls: newImages }));
   };
 
   const handleAdd = (e) => {
@@ -298,7 +295,7 @@ const AddProductModal = ({
               {/* Botón para subir imagen */}
               <button
                 type="button"
-                onClick={handleUploadClick}
+                onClick={handleImageUpload}
                 disabled={newItem.imageUrls.length >= 3}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                   newItem.imageUrls.length >= 3
@@ -307,7 +304,10 @@ const AddProductModal = ({
                 }`}
               >
                 <Upload className="h-4 w-4" />
-                {newItem.imageUrls.length >= 3 ? 'Máximo 3 imágenes' : `Subir Imagen (${newItem.imageUrls.length}/3)`}
+                {newItem.imageUrls.length >= 3 
+                  ? 'Máximo 3 imágenes' 
+                  : `Subir Imagen (${newItem.imageUrls.length}/3)`
+                }
               </button>
 
               {/* Galería de imágenes */}
@@ -334,8 +334,8 @@ const AddProductModal = ({
               )}
 
               {/* Información sobre las imágenes */}
-              <div className="text-xs text-[var(--color-text-secondary)] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                <strong>📸 Imágenes optimizadas:</strong> Máximo 3 imágenes por producto. Se comprimen inteligentemente a 800x600px con 75% de calidad, máximo 200KB cada una para evitar errores de almacenamiento (máximo 15MB de archivo original).
+              <div className="text-xs text-[var(--color-text-secondary)] bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <strong>📸 Sistema optimizado:</strong> Máximo 3 imágenes por producto. Se comprimen automáticamente a 600x450px con calidad balanceada, máximo 150KB cada una para garantizar sincronización con la base de datos.
               </div>
             </div>
             
