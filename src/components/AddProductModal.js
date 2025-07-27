@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef } from 'react';
 import { X, Plus, Upload, Trash2 } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { roundUpToMultiple, formatNumber } from '../utils/helpers';
-import { optimizeProductImage } from '../utils/imageOptimizer';
 
 const AddProductModal = ({ 
   isOpen, 
@@ -34,6 +33,95 @@ const AddProductModal = ({
     }
     return { unitCost: 0, finalPrice: 0 };
   }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
+
+  // Función simple y robusta para procesar imágenes (idéntica al EditProductModal)
+  const processImage = (file) => {
+    return new Promise((resolve, reject) => {
+      console.log('🔍 DEBUG processImage: Iniciando procesamiento simple');
+      
+      try {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          reject(new Error('No se pudo crear contexto de canvas'));
+          return;
+        }
+
+        const originalOnLoad = () => {
+          console.log('🔍 DEBUG processImage: Imagen cargada:', {
+            width: img.width,
+            height: img.height
+          });
+
+          try {
+            // Calcular dimensiones (máximo 600x450)
+            let { width, height } = img;
+            const maxWidth = 600;
+            const maxHeight = 450;
+
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.floor(width * ratio);
+              height = Math.floor(height * ratio);
+            }
+
+            console.log('🔍 DEBUG processImage: Nuevas dimensiones:', { width, height });
+
+            // Configurar canvas
+            canvas.width = width;
+            canvas.height = height;
+
+            // Dibujar imagen
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convertir a base64 con compresión
+            let quality = 0.8;
+            let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+            // Reducir calidad si es muy grande (máximo 200KB)
+            const maxSize = 200 * 1024;
+            while (dataUrl.length * 0.75 > maxSize && quality > 0.3) {
+              quality -= 0.1;
+              dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+
+            console.log('🔍 DEBUG processImage: Procesamiento completado:', {
+              finalQuality: quality,
+              dataUrlLength: dataUrl.length,
+              estimatedSizeKB: Math.round(dataUrl.length * 0.75 / 1024)
+            });
+
+            resolve(dataUrl);
+          } catch (canvasError) {
+            console.error('❌ DEBUG processImage: Error en canvas:', canvasError);
+            reject(new Error(`Error procesando imagen: ${canvasError.message}`));
+          }
+        };
+
+        img.onload = originalOnLoad;
+        img.onerror = (error) => {
+          console.error('❌ DEBUG processImage: Error cargando imagen:', error);
+          reject(new Error('Error al cargar la imagen'));
+        };
+
+        // Usar URL.createObjectURL en lugar de FileReader
+        console.log('🔍 DEBUG processImage: Creando URL del objeto...');
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+
+        // Limpiar URL después de un tiempo
+        setTimeout(() => {
+          URL.revokeObjectURL(objectUrl);
+        }, 1000);
+
+      } catch (error) {
+        console.error('❌ DEBUG processImage: Error general:', error);
+        reject(new Error(`Error general: ${error.message}`));
+      }
+    });
+  };
 
 
 
@@ -77,18 +165,16 @@ const AddProductModal = ({
     console.log('🔍 DEBUG: Validaciones pasadas, iniciando compresión...');
 
     try {
-      console.log('🔍 DEBUG: Llamando a optimizeProductImage...');
-      const optimizedResult = await optimizeProductImage(file);
+      console.log('🔍 DEBUG: Llamando a processImage...');
+      const processedDataUrl = await processImage(file);
       
-      console.log('🔍 DEBUG: Imagen optimizada exitosamente:', {
-        originalSize: optimizedResult.originalSize,
-        optimizedSize: optimizedResult.optimizedSize,
-        dataUrlLength: optimizedResult.dataUrl.length,
-        dimensions: optimizedResult.dimensions,
-        format: optimizedResult.format
+      console.log('🔍 DEBUG: Imagen procesada exitosamente:', {
+        originalSize: file.size,
+        dataUrlLength: processedDataUrl.length,
+        estimatedSizeKB: Math.round(processedDataUrl.length * 0.75 / 1024)
       });
       
-      const newImages = [...newItem.imageUrls, optimizedResult.dataUrl];
+      const newImages = [...newItem.imageUrls, processedDataUrl];
       console.log('🔍 DEBUG: Actualizando estado con nuevas imágenes:', newImages.length);
       
       setNewItem(prev => ({ ...prev, imageUrls: newImages }));
