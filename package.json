@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.83",
+  "version": "1.0.84",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -60,14 +60,18 @@
     "android:update-version": "node test-android-updates.js version",
     "test:update-system": "node test-update-system.js",
     "clear-version-cache": "node clear-version-cache.js",
-    "release": "node auto-release.js patch",
-    "release:patch": "node auto-release.js patch",
-    "release:minor": "node auto-release.js minor",
-    "release:major": "node auto-release.js major",
-    "build:deploy": "node auto-release.js patch",
-    "build:deploy:patch": "node auto-release.js patch",
-    "build:deploy:minor": "node auto-release.js minor",
-    "build:deploy:major": "node auto-release.js major"
+    "release": "node auto-firebase-release.js patch",
+    "release:patch": "node auto-firebase-release.js patch",
+    "release:minor": "node auto-firebase-release.js minor",
+    "release:major": "node auto-firebase-release.js major",
+    "release:firebase": "node auto-firebase-release.js patch",
+    "release:firebase:patch": "node auto-firebase-release.js patch",
+    "release:firebase:minor": "node auto-firebase-release.js minor",
+    "release:firebase:major": "node auto-firebase-release.js major",
+    "build:deploy": "node auto-firebase-release.js patch",
+    "build:deploy:patch": "node auto-firebase-release.js patch",
+    "build:deploy:minor": "node auto-firebase-release.js minor",
+    "build:deploy:major": "node auto-firebase-release.js major"
   },
   "eslintConfig": {
     "extends": [

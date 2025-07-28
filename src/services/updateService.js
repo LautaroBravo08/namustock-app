@@ -1,5 +1,6 @@
 // Servicio de actualización multiplataforma
 import { Capacitor } from '@capacitor/core';
+import { getLatestAppVersion, onVersionChange, logUpdateAttempt } from '../firebase/firestore';
 
 class UpdateService {
   constructor() {
@@ -186,8 +187,50 @@ class UpdateService {
     return { available: false, platform: 'electron' };
   }
 
-  // Verificar actualizaciones para móvil - MEJORADO
+  // Verificar actualizaciones para móvil - CON FIREBASE
   async checkMobileUpdate() {
+    try {
+      const platform = Capacitor.getPlatform();
+      console.log(`🔍 Verificando actualizaciones para ${platform}...`);
+      console.log(`📱 Versión actual del código: ${this.currentVersion}`);
+
+      // Verificar si está en modo simulación
+      const simulateUpdate = process.env.REACT_APP_SIMULATE_UPDATE === 'true';
+      if (simulateUpdate) {
+        console.log('🧪 MODO SIMULACIÓN ACTIVADO - Forzando actualización disponible');
+        return {
+          available: true,
+          version: '1.1.0',
+          currentVersion: this.currentVersion,
+          platform: platform,
+          downloadUrl: '/downloads/app-release-1.1.0.apk',
+          releaseNotes: 'Versión de prueba - Simulación de actualización automática',
+          isSimulated: true
+        };
+      }
+
+      // MÉTODO 1: Intentar obtener desde Firebase (más rápido y confiable)
+      console.log('🔥 Consultando Firebase para información de versión...');
+      const { versionInfo, error } = await getLatestAppVersion();
+      
+      if (versionInfo && !error) {
+        console.log('✅ Información obtenida desde Firebase');
+        console.log(`📦 Versión encontrada: ${versionInfo.version}`);
+        
+        return await this.processVersionInfo(versionInfo, 'firebase');
+      } else {
+        console.log('⚠️ Firebase falló, intentando GitHub como fallback...');
+        return await this.checkMobileUpdateGitHub();
+      }
+
+    } catch (error) {
+      console.error('❌ Error verificando actualizaciones:', error);
+      return { available: false, platform: Capacitor.getPlatform(), error: error.message };
+    }
+  }
+
+  // Verificar actualizaciones desde GitHub (fallback)
+  async checkMobileUpdateGitHub() {
     try {
       const platform = Capacitor.getPlatform();
       console.log(`🔍 Verificando actualizaciones para ${platform}...`);

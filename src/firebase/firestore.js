@@ -20,6 +20,118 @@ import {
 } from 'firebase/storage';
 import { db, storage } from './config';
 
+// ===== SISTEMA DE ACTUALIZACIONES =====
+
+// Obtener información de la última versión disponible
+export const getLatestAppVersion = async () => {
+  try {
+    console.log('🔥 Firebase: Consultando última versión de la app...');
+    const docRef = doc(db, 'app', 'version');
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const versionData = docSnap.data();
+      console.log('✅ Firebase: Versión obtenida:', versionData.version);
+      return { 
+        versionInfo: versionData, 
+        error: null 
+      };
+    } else {
+      console.log('⚠️ Firebase: No se encontró información de versión');
+      return { 
+        versionInfo: null, 
+        error: 'No version info found' 
+      };
+    }
+  } catch (error) {
+    console.error('❌ Firebase: Error obteniendo versión:', error);
+    return { 
+      versionInfo: null, 
+      error: error.message 
+    };
+  }
+};
+
+// Guardar/actualizar información de versión (solo para administradores)
+export const updateAppVersion = async (versionInfo) => {
+  try {
+    console.log('🔥 Firebase: Actualizando información de versión...');
+    
+    const versionData = {
+      version: versionInfo.version,
+      buildDate: new Date().toISOString(),
+      platform: 'android',
+      versionType: versionInfo.versionType || 'patch',
+      features: versionInfo.features || [],
+      releaseNotes: versionInfo.releaseNotes || `Versión ${versionInfo.version}`,
+      downloads: {
+        android: versionInfo.downloadUrl || `https://github.com/LautaroBravo08/namustock-app/releases/download/v${versionInfo.version}/namustock-${versionInfo.version}.apk`,
+        ios: `https://github.com/LautaroBravo08/namustock-app/releases/download/v${versionInfo.version}/namustock-${versionInfo.version}.ipa`
+      },
+      baseUrl: 'https://github.com/LautaroBravo08/namustock-app',
+      updateSystem: {
+        source: 'firebase',
+        cacheEnabled: false, // No necesario con Firebase
+        realTimeUpdates: true,
+        supportedPlatforms: ['android'],
+        platformRestriction: 'android-only'
+      },
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await setDoc(doc(db, 'app', 'version'), versionData);
+    
+    console.log('✅ Firebase: Información de versión actualizada exitosamente');
+    return { error: null };
+  } catch (error) {
+    console.error('❌ Firebase: Error actualizando versión:', error);
+    return { error: error.message };
+  }
+};
+
+// Escuchar cambios en la versión en tiempo real
+export const onVersionChange = (callback) => {
+  console.log('🔥 Firebase: Configurando listener para cambios de versión...');
+  const docRef = doc(db, 'app', 'version');
+  
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      const versionData = doc.data();
+      console.log('🔄 Firebase: Nueva versión detectada:', versionData.version);
+      callback(versionData);
+    } else {
+      console.log('⚠️ Firebase: No hay información de versión disponible');
+      callback(null);
+    }
+  }, (error) => {
+    console.error('❌ Firebase: Error en listener de versión:', error);
+    callback(null);
+  });
+};
+
+// Registrar estadísticas de actualización
+export const logUpdateAttempt = async (userId, updateInfo) => {
+  try {
+    const logData = {
+      userId: userId,
+      fromVersion: updateInfo.fromVersion,
+      toVersion: updateInfo.toVersion,
+      platform: updateInfo.platform,
+      success: updateInfo.success,
+      error: updateInfo.error || null,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    };
+    
+    await addDoc(collection(db, 'app', 'analytics', 'updateLogs'), logData);
+    console.log('📊 Firebase: Log de actualización registrado');
+    return { error: null };
+  } catch (error) {
+    console.error('❌ Firebase: Error registrando log:', error);
+    return { error: error.message };
+  }
+};
+
 // Productos
 export const saveProducts = async (userId, products) => {
   try {

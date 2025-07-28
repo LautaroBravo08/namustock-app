@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, RefreshCw, X, Smartphone, Monitor, Globe } from 'lucide-react';
-import updateService from '../services/updateService';
+import updateService from '../services/firebaseUpdateService';
 
 const UpdateNotification = () => {
   const [updateInfo, setUpdateInfo] = useState(null);

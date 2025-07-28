@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
-import updateService from '../services/updateService';
+import updateService from '../services/firebaseUpdateService';
 
 const UserMenu = ({ 
   user, 
