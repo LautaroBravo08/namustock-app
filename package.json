@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.80",
+  "version": "1.0.81",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
