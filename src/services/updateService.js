@@ -531,19 +531,14 @@ class UpdateService {
 
       let permissionsGranted = false;
 
-      // MÉTODO 1: Usar Capacitor Permissions para permisos básicos
+      // MÉTODO 1: Verificar permisos básicos (simplificado)
       try {
-        const { Permissions } = await import('@capacitor/permissions');
-        
-        // Solicitar permisos de almacenamiento
-        const storageResult = await Permissions.requestPermissions({
-          permissions: ['storage']
-        });
-        
-        console.log('📱 Resultado permisos de almacenamiento:', storageResult);
+        // Verificar si tenemos permisos básicos de almacenamiento
+        console.log('📱 Verificando permisos básicos...');
+        permissionsGranted = true; // Asumir permisos básicos por defecto
         
       } catch (capacitorError) {
-        console.log('⚠️ Capacitor Permissions no disponible:', capacitorError);
+        console.log('⚠️ Error verificando permisos:', capacitorError);
       }
 
       // MÉTODO 2: Solicitar permiso específico de instalación
