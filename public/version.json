@@ -1,6 +1,6 @@
 {
-  "version": "1.0.82",
-  "buildDate": "2025-07-28T08:41:01.975Z",
+  "version": "1.0.83",
+  "buildDate": "2025-07-28T08:56:02.803Z",
   "platform": "android",
   "versionType": "patch",
   "features": [
@@ -14,10 +14,10 @@
     "Mejoras de estabilidad",
     "Optimizaciones de rendimiento"
   ],
-  "releaseNotes": "Versión 1.0.82 - Correcciones y mejoras de estabilidad",
+  "releaseNotes": "Versión 1.0.83 - Correcciones y mejoras de estabilidad",
   "downloads": {
-    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.82/namustock-1.0.82.apk",
-    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.82/namustock-1.0.82.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.83/namustock-1.0.83.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.83/namustock-1.0.83.ipa"
   },
   "baseUrl": "https://github.com/LautaroBravo08/namustock-app",
   "updateSystem": {
