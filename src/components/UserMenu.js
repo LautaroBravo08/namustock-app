@@ -39,7 +39,7 @@ const UserMenu = ({
     
     try {
       showNotification('Comprobando actualizaciones...');
-      const updateInfo = await updateService.checkForUpdates();
+      const updateInfo = await updateService.checkManually();
       
       if (updateInfo && updateInfo.available) {
         showNotification(`¡Nueva versión ${updateInfo.version} disponible!`);

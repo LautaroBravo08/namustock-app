@@ -212,33 +212,71 @@ class UpdateService {
         return { available: false, platform: platform };
       }
 
-      // Intentar obtener información del release desde GitHub
+      // Intentar obtener información del release desde GitHub con cache y retry
       let release = null;
       
-      try {
-        console.log(`🌐 Consultando GitHub API: https://api.github.com/repos/${githubRepo}/releases/latest`);
-        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`, {
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'NamuStock-App-UpdateChecker'
-          }
-        });
-        
-        if (response.ok) {
-          release = await response.json();
-          console.log('✅ Información obtenida desde GitHub API');
-          console.log(`📦 Release encontrado: ${release.tag_name} (${release.name})`);
+      // PASO 1: Verificar cache local primero
+      const cacheKey = `github-release-${githubRepo}`;
+      const cacheTimeKey = `github-release-time-${githubRepo}`;
+      const cacheValidTime = 10 * 60 * 1000; // 10 minutos
+      
+      const cachedRelease = localStorage.getItem(cacheKey);
+      const cacheTime = localStorage.getItem(cacheTimeKey);
+      
+      if (cachedRelease && cacheTime) {
+        const timeDiff = Date.now() - parseInt(cacheTime);
+        if (timeDiff < cacheValidTime) {
+          console.log('📦 Usando información cacheada del release (válida por', Math.round((cacheValidTime - timeDiff) / 60000), 'minutos más)');
+          release = JSON.parse(cachedRelease);
         } else {
-          console.log(`❌ GitHub API respondió con error: ${response.status} ${response.statusText}`);
+          console.log('🗑️ Cache expirado, consultando GitHub API...');
         }
-      } catch (apiError) {
-        console.log('⚠️ GitHub API falló:', apiError.message);
+      }
+      
+      // PASO 2: Si no hay cache válido, consultar GitHub API con retry
+      if (!release) {
+        release = await this.fetchGitHubReleaseWithRetry(githubRepo);
+        
+        // Guardar en cache si se obtuvo exitosamente
+        if (release) {
+          localStorage.setItem(cacheKey, JSON.stringify(release));
+          localStorage.setItem(cacheTimeKey, Date.now().toString());
+          console.log('💾 Release guardado en cache local');
+        }
       }
 
-      // Si no se pudo obtener información del release, no hay actualización
+      // Si no se pudo obtener información del release, intentar fallback con version.json
       if (!release) {
         console.log('❌ No se pudo obtener información del release desde GitHub API');
-        return { available: false, platform: platform };
+        console.log('🔄 Intentando fallback con version.json local...');
+        
+        try {
+          const versionResponse = await fetch('/version.json?' + Date.now());
+          if (versionResponse.ok) {
+            const versionData = await versionResponse.json();
+            console.log('📦 Información obtenida desde version.json local');
+            
+            // Crear un objeto release simulado para compatibilidad
+            release = {
+              tag_name: `v${versionData.version}`,
+              name: `Release v${versionData.version}`,
+              body: versionData.releaseNotes || 'Nueva versión disponible',
+              published_at: versionData.buildDate,
+              assets: [{
+                name: `namustock-${versionData.version}.apk`,
+                browser_download_url: versionData.downloads?.android || null
+              }]
+            };
+            
+            console.log('✅ Fallback exitoso con version.json');
+          } else {
+            console.log('❌ Fallback con version.json también falló');
+            return { available: false, platform: platform, error: 'No se pudo verificar actualizaciones' };
+          }
+        } catch (fallbackError) {
+          console.log('❌ Error en fallback:', fallbackError.message);
+          return { available: false, platform: platform, error: 'No se pudo verificar actualizaciones' };
+        }
       }
 
       const latestVersion = release.tag_name.replace('v', '');
@@ -310,6 +348,97 @@ class UpdateService {
     }
     
     return false; // Son iguales
+  }
+
+  // Obtener release de GitHub con retry y manejo de rate limit
+  async fetchGitHubReleaseWithRetry(githubRepo, maxRetries = 3) {
+    const baseDelay = 2000; // 2 segundos base
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🌐 Intento ${attempt}/${maxRetries}: Consultando GitHub API...`);
+        console.log(`🔗 URL: https://api.github.com/repos/${githubRepo}/releases/latest`);
+        
+        const headers = {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'NamuStock-App-UpdateChecker',
+          'Cache-Control': 'no-cache'
+        };
+        
+        // Agregar token si está disponible (aumenta rate limit a 5000/hora)
+        const githubToken = process.env.REACT_APP_GITHUB_TOKEN;
+        if (githubToken) {
+          headers['Authorization'] = `token ${githubToken}`;
+          console.log('🔑 Usando token de GitHub para mayor rate limit');
+        }
+        
+        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`, {
+          headers
+        });
+        
+        if (response.ok) {
+          const release = await response.json();
+          console.log('✅ Información obtenida desde GitHub API');
+          console.log(`📦 Release encontrado: ${release.tag_name} (${release.name})`);
+          return release;
+        } else if (response.status === 403) {
+          // Rate limit exceeded
+          const resetTime = response.headers.get('X-RateLimit-Reset');
+          const remainingRequests = response.headers.get('X-RateLimit-Remaining');
+          
+          console.log(`⚠️ Rate limit excedido (${response.status})`);
+          console.log(`📊 Solicitudes restantes: ${remainingRequests || 'desconocido'}`);
+          
+          if (resetTime) {
+            const resetDate = new Date(parseInt(resetTime) * 1000);
+            const waitTime = Math.max(resetDate.getTime() - Date.now(), 0);
+            console.log(`⏰ Rate limit se resetea en: ${new Date(resetDate).toLocaleTimeString()}`);
+            
+            if (attempt < maxRetries && waitTime < 300000) { // Máximo 5 minutos de espera
+              console.log(`⏳ Esperando ${Math.round(waitTime / 1000)} segundos antes del siguiente intento...`);
+              await this.sleep(waitTime + 1000); // +1 segundo de margen
+              continue;
+            }
+          }
+          
+          if (attempt < maxRetries) {
+            const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff
+            console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
+            await this.sleep(delay);
+            continue;
+          }
+          
+          console.log('❌ Rate limit excedido y no se puede esperar más');
+          return null;
+        } else {
+          console.log(`❌ GitHub API respondió con error: ${response.status} ${response.statusText}`);
+          
+          if (attempt < maxRetries) {
+            const delay = baseDelay * Math.pow(2, attempt - 1);
+            console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
+            await this.sleep(delay);
+            continue;
+          }
+        }
+      } catch (apiError) {
+        console.log(`⚠️ Error en intento ${attempt}:`, apiError.message);
+        
+        if (attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt - 1);
+          console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
+          await this.sleep(delay);
+          continue;
+        }
+      }
+    }
+    
+    console.log('❌ Todos los intentos fallaron');
+    return null;
+  }
+
+  // Función helper para sleep
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
 
@@ -1633,30 +1762,56 @@ class UpdateService {
     }
   }
 
-  // Iniciar verificación automática
-  startAutoCheck() {
-    this.stopAutoCheck(); // Detener cualquier verificación anterior
-
-    this.autoCheckInterval = setInterval(async () => {
+  // Verificar actualizaciones una sola vez al iniciar la app
+  async checkOnAppStart() {
+    console.log('🚀 Verificando actualizaciones al iniciar la aplicación...');
+    
+    try {
       const updateInfo = await this.checkForUpdates();
       if (updateInfo && updateInfo.available) {
+        console.log('✅ Actualización encontrada al iniciar:', updateInfo.version);
         this.notifyListeners({
           type: 'update-available',
-          updateInfo
+          updateInfo: updateInfo
         });
+      } else {
+        console.log('✅ No hay actualizaciones disponibles al iniciar');
       }
-    }, this.updateCheckInterval);
-
-    // Verificar inmediatamente
-    setTimeout(() => this.checkForUpdates(), 1000);
+    } catch (error) {
+      console.log('⚠️ Error verificando actualizaciones al iniciar:', error.message);
+    }
   }
 
-  // Detener verificación automática
-  stopAutoCheck() {
-    if (this.autoCheckInterval) {
-      clearInterval(this.autoCheckInterval);
-      this.autoCheckInterval = null;
+  // Verificar actualizaciones manualmente (botón)
+  async checkManually() {
+    console.log('🔍 Verificación manual de actualizaciones solicitada...');
+    
+    try {
+      const updateInfo = await this.checkForUpdates();
+      if (updateInfo && updateInfo.available) {
+        console.log('✅ Actualización encontrada manualmente:', updateInfo.version);
+        this.notifyListeners({
+          type: 'update-available',
+          updateInfo: updateInfo
+        });
+        return updateInfo;
+      } else {
+        console.log('✅ No hay actualizaciones disponibles (verificación manual)');
+        return { available: false, message: 'No hay actualizaciones disponibles' };
+      }
+    } catch (error) {
+      console.log('❌ Error en verificación manual:', error.message);
+      throw error;
     }
+  }
+
+  // Métodos legacy para compatibilidad (ahora no hacen nada)
+  startAutoCheck() {
+    console.log('⚠️ startAutoCheck() deshabilitado - solo verificación al iniciar y manual');
+  }
+
+  stopAutoCheck() {
+    console.log('⚠️ stopAutoCheck() deshabilitado - no hay verificaciones automáticas');
   }
 }
 

@@ -61,12 +61,11 @@ const UpdateNotification = () => {
 
     updateService.addListener(handleUpdateAvailable);
 
-    // Iniciar verificación automática
-    updateService.startAutoCheck();
+    // Verificar actualizaciones una sola vez al iniciar la aplicación
+    updateService.checkOnAppStart();
 
     return () => {
       updateService.removeListener(handleUpdateAvailable);
-      updateService.stopAutoCheck();
     };
   }, []);
 
@@ -107,7 +106,7 @@ const UpdateNotification = () => {
   const handleCheckNow = async () => {
     setIsUpdating(true);
     try {
-      const update = await updateService.checkForUpdates();
+      const update = await updateService.checkManually();
       if (update && update.available) {
         setUpdateInfo(update);
         setIsVisible(true);

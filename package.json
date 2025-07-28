@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.0.75",
+  "version": "1.0.76",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -63,7 +63,11 @@
     "release": "node auto-release.js patch",
     "release:patch": "node auto-release.js patch",
     "release:minor": "node auto-release.js minor",
-    "release:major": "node auto-release.js major"
+    "release:major": "node auto-release.js major",
+    "build:deploy": "node auto-release.js patch",
+    "build:deploy:patch": "node auto-release.js patch",
+    "build:deploy:minor": "node auto-release.js minor",
+    "build:deploy:major": "node auto-release.js major"
   },
   "eslintConfig": {
     "extends": [

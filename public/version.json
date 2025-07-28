@@ -1,19 +1,32 @@
 {
-  "version": "1.0.75",
-  "buildDate": "2025-07-28T00:48:40.623Z",
+  "version": "1.0.76",
+  "buildDate": "2025-07-28T01:50:12.290Z",
   "platform": "android",
+  "versionType": "patch",
   "features": [
     "Sistema de inventario completo",
     "Gestión de ventas optimizada",
-    "Actualizaciones automáticas in-app",
+    "Actualizaciones inteligentes (solo al iniciar + manual)",
+    "Cache optimizado para GitHub API",
     "Limpieza automática de archivos antiguos",
-    "Notificaciones mejoradas",
-    "Interfaz de usuario actualizada"
+    "Interfaz de usuario mejorada",
+    "Correcciones de errores menores",
+    "Mejoras de estabilidad",
+    "Optimizaciones de rendimiento"
   ],
-  "releaseNotes": "Versión 1.0.75 con actualizaciones automáticas mejoradas y limpieza de archivos antiguos",
+  "releaseNotes": "Versión 1.0.76 - Correcciones y mejoras de estabilidad",
   "downloads": {
-    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.75/namustock-1.0.75.apk",
-    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.75/namustock-1.0.75.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.76/namustock-1.0.76.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.0.76/namustock-1.0.76.ipa"
   },
-  "baseUrl": "https://github.com/LautaroBravo08/namustock-app"
+  "baseUrl": "https://github.com/LautaroBravo08/namustock-app",
+  "updateSystem": {
+    "cacheEnabled": true,
+    "cacheDuration": "10 minutes",
+    "retryEnabled": true,
+    "fallbackEnabled": true,
+    "checkOnStart": true,
+    "manualCheck": true,
+    "automaticInterval": false
+  }
 }
