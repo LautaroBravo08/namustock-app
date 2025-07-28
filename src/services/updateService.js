@@ -88,7 +88,7 @@ class UpdateService {
     }
   }
 
-  // Verificar si hay actualizaciones disponibles
+  // Verificar si hay actualizaciones disponibles - SOLO ANDROID
   async checkForUpdates() {
     if (this.isChecking) return null;
 
@@ -96,16 +96,19 @@ class UpdateService {
     const platform = this.getPlatform();
 
     try {
-      switch (platform) {
-        case 'web':
-          return await this.checkWebUpdate();
-        case 'electron':
-          return await this.checkElectronUpdate();
-        case 'android':
-        case 'ios':
-          return await this.checkMobileUpdate();
-        default:
-          return null;
+      // SOLO permitir actualizaciones en Android
+      if (platform === 'android') {
+        console.log('📱 Plataforma Android detectada - Verificando actualizaciones...');
+        return await this.checkMobileUpdate();
+      } else {
+        console.log(`⚠️ Actualizaciones deshabilitadas para plataforma: ${platform}`);
+        console.log('📱 Las actualizaciones automáticas solo están disponibles en Android');
+        return { 
+          available: false, 
+          platform: platform,
+          message: 'Actualizaciones solo disponibles en Android',
+          reason: 'platform_not_supported'
+        };
       }
     } catch (error) {
       console.error('Error checking for updates:', error);
@@ -1762,9 +1765,17 @@ class UpdateService {
     }
   }
 
-  // Verificar actualizaciones una sola vez al iniciar la app
+  // Verificar actualizaciones una sola vez al iniciar la app - SOLO ANDROID
   async checkOnAppStart() {
-    console.log('🚀 Verificando actualizaciones al iniciar la aplicación...');
+    const platform = this.getPlatform();
+    
+    if (platform !== 'android') {
+      console.log(`📱 Plataforma ${platform} detectada - Actualizaciones deshabilitadas`);
+      console.log('ℹ️ Las actualizaciones automáticas solo están disponibles en Android');
+      return;
+    }
+    
+    console.log('🚀 Verificando actualizaciones al iniciar la aplicación (Android)...');
     
     try {
       const updateInfo = await this.checkForUpdates();
@@ -1774,6 +1785,8 @@ class UpdateService {
           type: 'update-available',
           updateInfo: updateInfo
         });
+      } else if (updateInfo && updateInfo.reason === 'platform_not_supported') {
+        console.log('ℹ️ Actualizaciones no soportadas en esta plataforma');
       } else {
         console.log('✅ No hay actualizaciones disponibles al iniciar');
       }
@@ -1782,9 +1795,25 @@ class UpdateService {
     }
   }
 
-  // Verificar actualizaciones manualmente (botón)
+  // Verificar actualizaciones manualmente (botón) - SOLO ANDROID
   async checkManually() {
+    const platform = this.getPlatform();
+    
     console.log('🔍 Verificación manual de actualizaciones solicitada...');
+    
+    if (platform !== 'android') {
+      console.log(`📱 Plataforma ${platform} detectada - Actualizaciones no disponibles`);
+      const message = platform === 'web' 
+        ? 'Las actualizaciones automáticas solo están disponibles en la app de Android'
+        : `Las actualizaciones automáticas no están disponibles en ${platform}`;
+      
+      return { 
+        available: false, 
+        message: message,
+        platform: platform,
+        reason: 'platform_not_supported'
+      };
+    }
     
     try {
       const updateInfo = await this.checkForUpdates();
@@ -1794,6 +1823,8 @@ class UpdateService {
           type: 'update-available',
           updateInfo: updateInfo
         });
+        return updateInfo;
+      } else if (updateInfo && updateInfo.reason === 'platform_not_supported') {
         return updateInfo;
       } else {
         console.log('✅ No hay actualizaciones disponibles (verificación manual)');

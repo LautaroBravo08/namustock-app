@@ -61,7 +61,7 @@ const UpdateNotification = () => {
 
     updateService.addListener(handleUpdateAvailable);
 
-    // Verificar actualizaciones una sola vez al iniciar la aplicación
+    // Verificar actualizaciones una sola vez al iniciar la aplicación - SOLO ANDROID
     updateService.checkOnAppStart();
 
     return () => {

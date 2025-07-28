@@ -221,7 +221,9 @@ function updateVersionInFiles(newVersion, versionType) {
       fallbackEnabled: true,
       checkOnStart: true,
       manualCheck: true,
-      automaticInterval: false
+      automaticInterval: false,
+      supportedPlatforms: ['android'],
+      platformRestriction: 'android-only'
     }
   };
   
@@ -283,7 +285,8 @@ function generateGitHubReleaseNotes(newVersion, currentVersion, versionType, siz
 - **Tamaño del APK**: ${sizeInMB} MB
 - **Fecha de build**: ${new Date().toLocaleDateString('es-ES')}
 
-### 🔧 Sistema de Actualizaciones Optimizado
+### 🔧 Sistema de Actualizaciones Optimizado (Solo Android)
+- **Plataforma soportada**: Solo disponible en Android
 - **Verificación inteligente**: Solo al iniciar la app y manual
 - **Cache optimizado**: Reduce solicitudes a GitHub API en 90%
 - **Retry automático**: Manejo robusto de errores de red

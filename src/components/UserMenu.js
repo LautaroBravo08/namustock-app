@@ -16,9 +16,9 @@ const UserMenu = ({
 
   // Obtener versión de la aplicación
   const getAppVersion = () => {
-    // HARDCODEAR versión igual que en updateService - NO USAR PROCESS.ENV
-    const hardcodedVersion = '1.0.71'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
-    return `v${hardcodedVersion}`;
+    // Usar la misma lógica que updateService para consistencia
+    const currentVersion = process.env.REACT_APP_VERSION || '1.0.66';
+    return `v${currentVersion}`;
   };
 
   useEffect(() => {
@@ -48,6 +48,9 @@ const UserMenu = ({
           type: 'update-available',
           updateInfo
         });
+      } else if (updateInfo && updateInfo.reason === 'platform_not_supported') {
+        // Mostrar mensaje específico para plataformas no soportadas
+        showNotification(updateInfo.message);
       } else {
         showNotification('No hay actualizaciones disponibles');
       }
