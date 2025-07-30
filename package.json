@@ -1,0 +1,183 @@
+{
+  "name": "namustock-app",
+  "version": "1.0.67",
+  "private": true,
+  "dependencies": {
+    "@capacitor-community/file-opener": "^7.0.1",
+    "@capacitor-community/http": "^1.4.1",
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/browser": "^7.0.1",
+    "@capacitor/cli": "^7.4.2",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/device": "^7.0.1",
+    "@capacitor/filesystem": "^7.1.2",
+    "@capacitor/ios": "^7.4.2",
+    "@capacitor/local-notifications": "^7.0.1",
+    "@capacitor/push-notifications": "^7.0.1",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.3",
+    "electron-builder": "^26.0.12",
+    "firebase": "^12.0.0",
+    "lucide-react": "^0.445.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-firebase-hooks": "^5.1.1",
+    "react-scripts": "^5.0.1",
+    "wait-on": "^8.0.3",
+    "web-vitals": "^3.5.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-dev": "set ELECTRON_IS_DEV=true && electron .",
+    "electron-build": "npm run build && electron-builder",
+    "dist": "npm run build && electron-builder --publish=never",
+    "cap:build": "npm run build && npx cap sync",
+    "cap:android": "npm run cap:build && npx cap open android",
+    "cap:ios": "npm run cap:build && npx cap open ios",
+    "android": "npm run cap:android",
+    "ios": "npm run cap:ios",
+    "dev": "node dev-scripts.js",
+    "build:all": "npm run build && npm run cap:build",
+    "dev:electron": "concurrently \"npm start\" \"wait-on http://localhost:3000 && set ELECTRON_IS_DEV=true && electron .\"",
+    "dev:android": "npm run cap:android",
+    "dev:ios": "npm run cap:ios",
+    "dist:windows": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:all": "npm run build && electron-builder --win --mac --linux",
+    "clean": "rmdir /s /q node_modules & del package-lock.json",
+    "clean-install": "npm run clean && npm install && npx cap sync",
+    "test:all": "npm run build && npm run cap:build",
+    "dev:web": "npm start",
+    "preview:electron": "npm run build && set ELECTRON_IS_DEV=false && electron .",
+    "build:mobile": "npm run build && npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios",
+    "version:patch": "node update-version.js patch",
+    "version:minor": "node update-version.js minor",
+    "version:major": "node update-version.js major",
+    "deploy": "node deploy.js",
+    "deploy:patch": "node deploy.js patch",
+    "deploy:minor": "node deploy.js minor",
+    "deploy:major": "node deploy.js major",
+    "update-check": "node -e \"console.log('Verificando actualizaciones...'); require('./src/services/updateService.js').default.checkForUpdates().then(r => console.log(r))\"",
+    "test:updates": "node test-updates.js test",
+    "test:updates-check": "node test-updates.js check",
+    "test:android-updates": "node test-android-updates.js test",
+    "android:simulate-update": "node test-android-updates.js simulate",
+    "android:disable-update": "node test-android-updates.js disable",
+    "android:update-version": "node test-android-updates.js version",
+    "setup:github-releases": "node scripts/setup-github-releases.js",
+    "release": "node scripts/create-release.js",
+    "release:patch": "node scripts/create-release.js patch",
+    "release:minor": "node scripts/create-release.js minor",
+    "release:major": "node scripts/create-release.js major",
+    "build:deploy": "node build-and-deploy.js",
+    "build:deploy:patch": "node build-and-deploy.js patch --clean",
+    "build:deploy:minor": "node build-and-deploy.js minor --clean",
+    "build:deploy:major": "node build-and-deploy.js major --clean",
+    "cleanup": "node cleanup-apks.js",
+    "cleanup:all": "node cleanup-apks.js all",
+    "cleanup:stats": "node cleanup-apks.js stats",
+    "test:update-system": "node test-update-system.js",
+    "deploy:auto": "node deploy-simple.js patch",
+    "deploy:auto:minor": "node deploy-simple.js minor",
+    "deploy:auto:major": "node deploy-simple.js major",
+    "deploy:complete": "node deploy-auto-complete.js patch",
+    "deploy:complete:minor": "node deploy-auto-complete.js minor",
+    "deploy:complete:major": "node deploy-auto-complete.js major",
+    "release:github": "node auto-deploy-github.js patch",
+    "release:github:minor": "node auto-deploy-github.js minor",
+    "release:github:major": "node auto-deploy-github.js major",
+    "setup:github": "node setup-github-auto-deploy.js",
+    "deploy:github": "node auto-deploy-github.js patch --clean --auto",
+    "deploy:github:minor": "node auto-deploy-github.js minor --clean --auto",
+    "deploy:github:major": "node auto-deploy-github.js major --clean --auto",
+    "deploy:github:draft": "node auto-deploy-github.js patch --clean --auto --draft",
+    "quick:deploy": "node deploy-quick.js patch",
+    "quick:deploy:minor": "node deploy-quick.js minor",
+    "quick:deploy:major": "node deploy-quick.js major"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1"
+  },
+  "overrides": {
+    "react-scripts": {
+      "typescript": "^5.3.3"
+    }
+  },
+  "main": "public/electron.js",
+  "homepage": "./",
+  "build": {
+    "appId": "com.namustock.app",
+    "productName": "NamuStock App",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "public/electron.js"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}

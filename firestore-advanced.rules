@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Función helper para validar estructura de productos
+    function isValidProduct(product) {
+      return product.keys().hasAll(['name', 'price', 'stock']) &&
+             product.name is string &&
+             product.price is number &&
+             product.price >= 0 &&
+             product.stock is number &&
+             product.stock >= 0;
+    }
+    
+    // Función helper para validar estructura de ventas
+    function isValidSale(sale) {
+      return sale.keys().hasAll(['total', 'items', 'createdAt']) &&
+             sale.total is number &&
+             sale.total >= 0 &&
+             sale.items is list &&
+             sale.createdAt is string;
+    }
+    
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      match /data/products {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validar estructura de productos al escribir
+        allow write: if request.auth != null 
+          && request.auth.uid == userId
+          && (request.resource.data.products is list || !request.resource.data.keys().hasAny(['products']));
+      }
+      
+      match /data/settings {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validar que las configuraciones tengan estructura válida
+        allow write: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasAll(['lastUpdated']);
+      }
+      
+      match /sales/{saleId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validación estricta para ventas
+        allow create: if request.auth != null 
+          && request.auth.uid == userId
+          && isValidSale(request.resource.data);
+          
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && isValidSale(request.resource.data);
+      }
+      
+      match /productImages/{imageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validaciones más estrictas para imágenes
+        allow create: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasAll(['imageData', 'createdAt'])
+          && request.resource.data.imageData is string
+          && request.resource.data.imageData.size() < 5000000; // 5MB
+          
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.imageData.size() < 5000000;
+      }
+    }
+    
+    // Denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

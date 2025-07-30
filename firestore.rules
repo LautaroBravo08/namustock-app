@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para los datos de usuarios
+    match /users/{userId} {
+      // Solo el usuario autenticado puede acceder a sus propios datos
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Reglas para la subcolección 'data'
+      match /data/{document} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Reglas para la subcolección 'sales'
+      match /sales/{saleId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validaciones adicionales para ventas
+        allow create: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasAll(['createdAt', 'total'])
+          && request.resource.data.total is number
+          && request.resource.data.total >= 0;
+          
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.total is number
+          && request.resource.data.total >= 0;
+      }
+      
+      // Reglas para la subcolección 'productImages'
+      match /productImages/{imageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // Validación para imágenes - limitar tamaño
+        allow create: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.size() < 5000000; // 5MB límite
+          
+        allow update: if request.auth != null 
+          && request.auth.uid == userId
+          && request.resource.data.size() < 5000000;
+      }
+    }
+    
+    // Denegar acceso a cualquier otro documento
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
