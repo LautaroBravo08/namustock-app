@@ -71,59 +71,32 @@ const AddProductModal = ({
   };
 
   const handleFileChange = async (event) => {
-    console.log('🔍 DEBUG: Iniciando handleFileChange con nueva arquitectura');
-    
     const file = event.target.files[0];
-    if (!file) {
-      console.log('🔍 DEBUG: No hay archivo seleccionado');
+    if (!file) return;
+
+    // Validación mínima
+    if (imageData.length >= 3) {
+      alert('Máximo 3 imágenes permitidas por producto');
       return;
     }
-
-    console.log('🔍 DEBUG: Archivo seleccionado:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified
-    });
-
-    // Validaciones
-    if (!file.type.startsWith('image/')) {
-      console.log('🔍 DEBUG: Archivo no es imagen, tipo:', file.type);
-      alert('Por favor selecciona solo archivos de imagen');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB máximo
-      console.log('🔍 DEBUG: Archivo muy grande:', file.size);
-      alert('La imagen es demasiado grande. Máximo 10MB permitido.');
-      return;
-    }
-
-    console.log('🔍 DEBUG: Validaciones pasadas, iniciando compresión...');
 
     try {
       const processedDataUrl = await processImage(file);
       const { imageId, error } = await saveProductImage(user.uid, processedDataUrl);
       
       if (error) {
-        throw new Error(error);
+        alert(`Error: ${error}`);
+        return;
       }
 
-      // Actualizar estado local con la nueva imagen
+      // Actualizar estado local
       const newImageData = [...imageData, { id: imageId, data: processedDataUrl }];
       const newImageIds = [...newItem.imageIds, imageId];
       
       setImageData(newImageData);
       setNewItem(prev => ({ ...prev, imageIds: newImageIds }));
     } catch (error) {
-      console.error('❌ ERROR DETALLADO procesando imagen:', {
-        message: error.message,
-        stack: error.stack,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size
-      });
-      alert(`Error al procesar la imagen: ${error.message}`);
+      alert(`Error procesando imagen: ${error.message}`);
     }
 
     // Limpiar input
