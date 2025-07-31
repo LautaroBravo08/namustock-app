@@ -229,47 +229,32 @@ export const getUserSettings = async (userId) => {
   }
 };
 
-// Funciones para manejar imágenes de productos por separado con chunks
+// Sistema simple de imágenes - cada imagen como documento separado (máximo 1MB)
 export const saveProductImage = async (userId, imageData) => {
   try {
-    console.log('🔥 Guardando imagen en Firestore con sistema de chunks...');
+    console.log('🔥 Guardando imagen simple en Firestore...');
     
     // Crear ID único para la imagen
     const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Configuración de chunks (900KB por chunk para estar seguros del límite de 1MB)
-    const CHUNK_SIZE = 900 * 1024; // 900KB en bytes
-    const base64Data = imageData.split(',')[1] || imageData; // Remover prefijo data:image si existe
+    // Validar tamaño (máximo 1MB en base64)
+    const sizeInBytes = imageData.length * 0.75; // Aproximación del tamaño real
+    const maxSize = 1024 * 1024; // 1MB
     
-    // Calcular número de chunks necesarios
-    const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
-    console.log(`📦 Dividiendo imagen en ${totalChunks} chunks de máximo ${CHUNK_SIZE} bytes`);
+    if (sizeInBytes > maxSize) {
+      console.error(`❌ Imagen demasiado grande: ${Math.round(sizeInBytes / 1024)}KB (máximo: 1MB)`);
+      return { imageId: null, error: 'La imagen es demasiado grande. Máximo 1MB.' };
+    }
     
-    // Crear documento principal con metadata
+    // Guardar imagen como documento simple
     await setDoc(doc(db, 'users', userId, 'productImages', imageId), {
-      totalChunks: totalChunks,
-      originalSize: base64Data.length,
+      imageData: imageData,
       createdAt: new Date().toISOString(),
+      size: sizeInBytes,
       mimeType: imageData.includes('data:') ? imageData.split(';')[0].split(':')[1] : 'image/jpeg'
     });
     
-    // Guardar cada chunk por separado
-    const batch = writeBatch(db);
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, base64Data.length);
-      const chunkData = base64Data.slice(start, end);
-      
-      const chunkRef = doc(db, 'users', userId, 'productImages', imageId, 'chunks', `chunk_${i}`);
-      batch.set(chunkRef, {
-        data: chunkData,
-        chunkIndex: i,
-        size: chunkData.length
-      });
-    }
-    
-    await batch.commit();
-    console.log(`✅ Imagen guardada con ID: ${imageId} (${totalChunks} chunks)`);
+    console.log(`✅ Imagen guardada con ID: ${imageId} (${Math.round(sizeInBytes / 1024)}KB)`);
     return { imageId: imageId, error: null };
   } catch (error) {
     console.error('❌ Error guardando imagen:', error);
@@ -279,9 +264,8 @@ export const saveProductImage = async (userId, imageData) => {
 
 export const getProductImage = async (userId, imageId) => {
   try {
-    console.log(`🔍 Recuperando imagen ${imageId} con sistema de chunks...`);
+    console.log(`🔍 Recuperando imagen ${imageId} con sistema simple...`);
     
-    // Obtener metadata de la imagen
     const imageRef = doc(db, 'users', userId, 'productImages', imageId);
     const imageSnap = await getDoc(imageRef);
     
@@ -289,43 +273,9 @@ export const getProductImage = async (userId, imageId) => {
       return { imageData: null, error: 'Imagen no encontrada' };
     }
     
-    const metadata = imageSnap.data();
-    
-    // Si es una imagen antigua (sin chunks), devolver directamente
-    if (metadata.imageData) {
-      console.log('📷 Imagen antigua encontrada, devolviendo directamente');
-      return { imageData: metadata.imageData, error: null };
-    }
-    
-    // Si es una imagen nueva con chunks, reconstruir
-    const { totalChunks, mimeType } = metadata;
-    console.log(`📦 Reconstruyendo imagen de ${totalChunks} chunks`);
-    
-    // Obtener todos los chunks
-    const chunksQuery = query(
-      collection(db, 'users', userId, 'productImages', imageId, 'chunks'),
-      orderBy('chunkIndex')
-    );
-    const chunksSnapshot = await getDocs(chunksQuery);
-    
-    if (chunksSnapshot.empty) {
-      return { imageData: null, error: 'Chunks de imagen no encontrados' };
-    }
-    
-    // Reconstruir la imagen base64
-    let reconstructedData = '';
-    chunksSnapshot.forEach((chunkDoc) => {
-      const chunkData = chunkDoc.data();
-      reconstructedData += chunkData.data;
-    });
-    
-    // Agregar prefijo data URL si es necesario
-    const fullImageData = reconstructedData.startsWith('data:') 
-      ? reconstructedData 
-      : `data:${mimeType || 'image/jpeg'};base64,${reconstructedData}`;
-    
-    console.log(`✅ Imagen reconstruida exitosamente (${reconstructedData.length} caracteres)`);
-    return { imageData: fullImageData, error: null };
+    const data = imageSnap.data();
+    console.log(`✅ Imagen encontrada (${Math.round(data.size / 1024)}KB)`);
+    return { imageData: data.imageData, error: null };
     
   } catch (error) {
     console.error('❌ Error recuperando imagen:', error);
@@ -335,38 +285,9 @@ export const getProductImage = async (userId, imageId) => {
 
 export const deleteProductImage = async (userId, imageId) => {
   try {
-    console.log(`🗑️ Eliminando imagen ${imageId} y sus chunks...`);
+    console.log(`🗑️ Eliminando imagen ${imageId}...`);
     
-    // Primero obtener metadata para saber si tiene chunks
-    const imageRef = doc(db, 'users', userId, 'productImages', imageId);
-    const imageSnap = await getDoc(imageRef);
-    
-    if (imageSnap.exists()) {
-      const metadata = imageSnap.data();
-      
-      // Si tiene chunks, eliminarlos primero
-      if (metadata.totalChunks && metadata.totalChunks > 0) {
-        console.log(`🗑️ Eliminando ${metadata.totalChunks} chunks...`);
-        
-        // Obtener todos los chunks
-        const chunksQuery = query(
-          collection(db, 'users', userId, 'productImages', imageId, 'chunks')
-        );
-        const chunksSnapshot = await getDocs(chunksQuery);
-        
-        // Eliminar chunks en batch
-        const batch = writeBatch(db);
-        chunksSnapshot.forEach((chunkDoc) => {
-          batch.delete(chunkDoc.ref);
-        });
-        
-        await batch.commit();
-        console.log(`✅ ${chunksSnapshot.size} chunks eliminados`);
-      }
-    }
-    
-    // Eliminar documento principal
-    await deleteDoc(imageRef);
+    await deleteDoc(doc(db, 'users', userId, 'productImages', imageId));
     console.log('✅ Imagen eliminada:', imageId);
     return { error: null };
   } catch (error) {
@@ -397,111 +318,7 @@ export const getMultipleProductImages = async (userId, imageIds) => {
   }
 };
 
-// Función para migrar imágenes existentes al nuevo sistema de chunks
-export const migrateExistingImages = async (userId) => {
-  try {
-    console.log('🔄 Iniciando migración de imágenes existentes...');
-    
-    // Obtener todas las imágenes existentes
-    const imagesQuery = query(collection(db, 'users', userId, 'productImages'));
-    const imagesSnapshot = await getDocs(imagesQuery);
-    
-    if (imagesSnapshot.empty) {
-      console.log('✅ No hay imágenes para migrar');
-      return { migratedCount: 0, error: null };
-    }
-    
-    let migratedCount = 0;
-    const batch = writeBatch(db);
-    
-    for (const imageDoc of imagesSnapshot.docs) {
-      const imageData = imageDoc.data();
-      
-      // Solo migrar imágenes que tienen imageData directamente (formato antiguo)
-      if (imageData.imageData && !imageData.totalChunks) {
-        console.log(`🔄 Migrando imagen ${imageDoc.id}...`);
-        
-        const base64Data = imageData.imageData.split(',')[1] || imageData.imageData;
-        const CHUNK_SIZE = 900 * 1024;
-        const totalChunks = Math.ceil(base64Data.length / CHUNK_SIZE);
-        
-        // Actualizar metadata del documento principal
-        batch.update(imageDoc.ref, {
-          totalChunks: totalChunks,
-          originalSize: base64Data.length,
-          mimeType: imageData.imageData.includes('data:') 
-            ? imageData.imageData.split(';')[0].split(':')[1] 
-            : 'image/jpeg',
-          // Remover imageData del documento principal
-          imageData: null
-        });
-        
-        // Crear chunks
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, base64Data.length);
-          const chunkData = base64Data.slice(start, end);
-          
-          const chunkRef = doc(db, 'users', userId, 'productImages', imageDoc.id, 'chunks', `chunk_${i}`);
-          batch.set(chunkRef, {
-            data: chunkData,
-            chunkIndex: i,
-            size: chunkData.length
-          });
-        }
-        
-        migratedCount++;
-      }
-    }
-    
-    if (migratedCount > 0) {
-      await batch.commit();
-      console.log(`✅ ${migratedCount} imágenes migradas exitosamente`);
-    }
-    
-    return { migratedCount, error: null };
-  } catch (error) {
-    console.error('❌ Error migrando imágenes:', error);
-    return { migratedCount: 0, error: error.message };
-  }
-};
 
-// Función para obtener estadísticas de almacenamiento de imágenes
-export const getImageStorageStats = async (userId) => {
-  try {
-    const imagesQuery = query(collection(db, 'users', userId, 'productImages'));
-    const imagesSnapshot = await getDocs(imagesQuery);
-    
-    let totalImages = 0;
-    let totalSize = 0;
-    let chunkedImages = 0;
-    let legacyImages = 0;
-    
-    imagesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      totalImages++;
-      
-      if (data.totalChunks) {
-        chunkedImages++;
-        totalSize += data.originalSize || 0;
-      } else if (data.imageData) {
-        legacyImages++;
-        totalSize += data.size || data.imageData.length || 0;
-      }
-    });
-    
-    return {
-      totalImages,
-      totalSize,
-      chunkedImages,
-      legacyImages,
-      averageSize: totalImages > 0 ? Math.round(totalSize / totalImages) : 0,
-      error: null
-    };
-  } catch (error) {
-    return { error: error.message };
-  }
-};
 
 // Funciones para manejar imágenes en Firebase Storage
 export const uploadProductImage = async (userId, productId, file, imageIndex) => {

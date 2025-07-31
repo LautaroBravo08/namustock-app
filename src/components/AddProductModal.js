@@ -39,221 +39,72 @@ const AddProductModal = ({
     return { unitCost: 0, finalPrice: 0 };
   }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
 
-  // Función robusta para procesar imágenes con múltiples métodos y fallbacks
+  // Función simple para procesar imágenes - convierte a base64 con compresión automática
   const processImage = (file) => {
     return new Promise((resolve, reject) => {
-      console.log('🔍 DEBUG processImage: Iniciando procesamiento híbrido');
-      console.log('🔍 DEBUG processImage: Información del archivo:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: new Date(file.lastModified).toISOString(),
-        webkitRelativePath: file.webkitRelativePath || 'N/A',
-        stream: typeof file.stream === 'function' ? 'Disponible' : 'No disponible'
-      });
+      console.log('🖼️ Procesando imagen:', file.name, `(${Math.round(file.size / 1024)}KB)`);
       
-      const processImageData = (imageSrc) => {
-        const img = new Image();
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          reject(new Error('No se pudo crear contexto de canvas'));
-          return;
-        }
-
-        img.onload = () => {
-          console.log('🔍 DEBUG processImage: Imagen cargada exitosamente:', {
-            width: img.width,
-            height: img.height,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight
-          });
-
-          try {
-            // Validar dimensiones
-            if (img.width === 0 || img.height === 0) {
-              reject(new Error('La imagen tiene dimensiones inválidas'));
-              return;
-            }
-
-            // Calcular dimensiones (máximo 600x450)
-            let { width, height } = img;
-            const maxWidth = 600;
-            const maxHeight = 450;
-
-            if (width > maxWidth || height > maxHeight) {
-              const ratio = Math.min(maxWidth / width, maxHeight / height);
-              width = Math.floor(width * ratio);
-              height = Math.floor(height * ratio);
-            }
-
-            // Asegurar dimensiones mínimas
-            width = Math.max(1, width);
-            height = Math.max(1, height);
-
-            console.log('🔍 DEBUG processImage: Nuevas dimensiones:', { width, height });
-
-            // Configurar canvas
-            canvas.width = width;
-            canvas.height = height;
-
-            // Limpiar canvas
-            ctx.clearRect(0, 0, width, height);
-
-            // Configurar calidad de renderizado
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            // Dibujar imagen
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Convertir a base64 con compresión
-            let quality = 0.8;
-            let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-            // Reducir calidad si es muy grande (máximo 200KB)
-            const maxSize = 200 * 1024;
-            let attempts = 0;
-            while (dataUrl.length * 0.75 > maxSize && quality > 0.3 && attempts < 5) {
-              quality -= 0.1;
-              dataUrl = canvas.toDataURL('image/jpeg', quality);
-              attempts++;
-              console.log(`🔍 DEBUG processImage: Intento ${attempts}, calidad: ${quality.toFixed(1)}, tamaño: ${Math.round(dataUrl.length * 0.75 / 1024)}KB`);
-            }
-
-            console.log('🔍 DEBUG processImage: Procesamiento completado exitosamente:', {
-              finalQuality: quality,
-              dataUrlLength: dataUrl.length,
-              estimatedSizeKB: Math.round(dataUrl.length * 0.75 / 1024),
-              attempts
-            });
-
-            resolve(dataUrl);
-          } catch (canvasError) {
-            console.error('❌ DEBUG processImage: Error en canvas:', canvasError);
-            reject(new Error(`Error procesando imagen en canvas: ${canvasError.message}`));
-          }
-        };
-
-        img.onerror = (error) => {
-          console.error('❌ DEBUG processImage: Error cargando imagen:', error);
-          reject(new Error('La imagen no se pudo cargar. Verifica que el archivo no esté corrupto.'));
-        };
-
-        img.src = imageSrc;
-      };
-
-      // Función de fallback usando URL.createObjectURL
-      const tryObjectURL = () => {
-        console.log('🔍 DEBUG processImage: Intentando método alternativo con URL.createObjectURL...');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
         try {
-          const objectURL = URL.createObjectURL(file);
-          console.log('🔍 DEBUG processImage: ObjectURL creado exitosamente:', objectURL);
+          // Calcular dimensiones para que la imagen final sea menor a 1MB
+          let { width, height } = img;
+          const maxWidth = 800;
+          const maxHeight = 600;
           
-          processImageData(objectURL);
+          // Redimensionar manteniendo proporción
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
           
-          // Limpiar el object URL después de usarlo
-          setTimeout(() => {
-            URL.revokeObjectURL(objectURL);
-            console.log('🔍 DEBUG processImage: ObjectURL limpiado');
-          }, 1000);
+          canvas.width = width;
+          canvas.height = height;
           
-        } catch (objectURLError) {
-          console.error('❌ DEBUG processImage: Error con ObjectURL:', objectURLError);
-          reject(new Error(`Error procesando imagen con método alternativo: ${objectURLError.message}`));
-        }
-      };
-
-      // Usar FileReader directamente (método principal)
-      console.log('🔍 DEBUG processImage: Usando FileReader directamente...');
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        console.log('🔍 DEBUG processImage: FileReader exitoso');
-        console.log('🔍 DEBUG processImage: Longitud del resultado:', e.target.result?.length || 'undefined');
-        console.log('🔍 DEBUG processImage: Tipo de resultado:', typeof e.target.result);
-        
-        if (e.target.result) {
-          console.log('🔍 DEBUG processImage: Primeros 50 caracteres:', e.target.result.substring(0, 50));
+          // Dibujar imagen redimensionada
+          ctx.drawImage(img, 0, 0, width, height);
           
-          // Validar que el resultado sea un data URL válido
-          if (!e.target.result.startsWith('data:image/')) {
-            console.error('❌ DEBUG processImage: Resultado no es data URL válido');
-            tryObjectURL(); // Intentar método alternativo
+          // Comprimir hasta que sea menor a 1MB
+          let quality = 0.9;
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          const maxSizeBytes = 1024 * 1024; // 1MB
+          
+          while (dataUrl.length * 0.75 > maxSizeBytes && quality > 0.1) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          const finalSizeKB = Math.round(dataUrl.length * 0.75 / 1024);
+          console.log(`✅ Imagen procesada: ${width}x${height}, calidad: ${quality.toFixed(1)}, tamaño: ${finalSizeKB}KB`);
+          
+          if (finalSizeKB > 1024) {
+            reject(new Error('No se pudo comprimir la imagen lo suficiente. Intenta con una imagen más pequeña.'));
             return;
           }
           
-          processImageData(e.target.result);
-        } else {
-          console.error('❌ DEBUG processImage: Resultado del FileReader es null/undefined');
-          tryObjectURL(); // Intentar método alternativo
+          resolve(dataUrl);
+        } catch (error) {
+          reject(new Error(`Error procesando imagen: ${error.message}`));
         }
       };
       
-      reader.onerror = (error) => {
-        console.error('❌ DEBUG processImage: FileReader falló:', error);
-        console.error('❌ DEBUG processImage: Error details:', {
-          type: error.type,
-          target: error.target,
-          loaded: error.loaded,
-          total: error.total,
-          readyState: reader.readyState,
-          error: reader.error
-        });
-        
-        // Obtener más información del error
-        const errorMessage = error.target?.error?.message || reader.error?.message || 'Error desconocido al leer el archivo';
-        console.error('❌ DEBUG processImage: Error específico:', errorMessage);
-        
-        // Intentar método alternativo antes de fallar completamente
-        console.log('🔍 DEBUG processImage: Intentando método alternativo después del error...');
-        tryObjectURL();
+      img.onerror = () => {
+        reject(new Error('Error cargando la imagen. Verifica que el archivo sea válido.'));
       };
       
-      reader.onabort = () => {
-        console.error('❌ DEBUG processImage: FileReader fue abortado');
-        tryObjectURL();
-      };
+      // Cargar imagen usando URL.createObjectURL (más simple y confiable)
+      const objectURL = URL.createObjectURL(file);
+      img.src = objectURL;
       
-      try {
-        console.log('🔍 DEBUG processImage: Iniciando FileReader.readAsDataURL...');
-        console.log('🔍 DEBUG processImage: Validando archivo antes de leer:', {
-          isFile: file instanceof File,
-          isBlob: file instanceof Blob,
-          hasName: !!file.name,
-          hasType: !!file.type,
-          hasSize: typeof file.size === 'number',
-          size: file.size,
-          constructor: file.constructor.name,
-          lastModified: file.lastModified
-        });
-        
-        // Validación adicional del archivo
-        if (!(file instanceof File) && !(file instanceof Blob)) {
-          throw new Error('El objeto no es un archivo válido');
-        }
-        
-        if (file.size === 0) {
-          throw new Error('El archivo está vacío');
-        }
-        
-        if (file.size > 50 * 1024 * 1024) { // 50MB límite
-          throw new Error('El archivo es demasiado grande (máximo 50MB)');
-        }
-        
-        // Verificar que el FileReader esté disponible
-        if (typeof FileReader === 'undefined') {
-          throw new Error('FileReader no está disponible en este navegador');
-        }
-        
-        reader.readAsDataURL(file);
-        
-      } catch (error) {
-        console.error('❌ DEBUG processImage: Error iniciando FileReader:', error);
-        console.log('🔍 DEBUG processImage: Intentando método alternativo después del error de inicialización...');
-        tryObjectURL();
-      }
+      // Limpiar URL después de cargar
+      img.onload = (originalOnload => function() {
+        URL.revokeObjectURL(objectURL);
+        return originalOnload.apply(this, arguments);
+      })(img.onload);
     });
   };
 
@@ -303,24 +154,12 @@ const AddProductModal = ({
     console.log('🔍 DEBUG: Validaciones pasadas, iniciando compresión...');
 
     try {
-      console.log('🔍 DEBUG: Llamando a processImage...');
       const processedDataUrl = await processImage(file);
-      
-      console.log('🔍 DEBUG: Imagen procesada exitosamente:', {
-        originalSize: file.size,
-        dataUrlLength: processedDataUrl.length,
-        estimatedSizeKB: Math.round(processedDataUrl.length * 0.75 / 1024)
-      });
-
-      // Guardar imagen por separado en Firestore
-      console.log('🔍 DEBUG: Guardando imagen en Firestore...');
       const { imageId, error } = await saveProductImage(user.uid, processedDataUrl);
       
       if (error) {
-        throw new Error(`Error guardando imagen: ${error}`);
+        throw new Error(error);
       }
-
-      console.log('✅ Imagen guardada en Firestore con ID:', imageId);
 
       // Actualizar estado local con la nueva imagen
       const newImageData = [...imageData, { id: imageId, data: processedDataUrl }];
@@ -328,8 +167,6 @@ const AddProductModal = ({
       
       setImageData(newImageData);
       setNewItem(prev => ({ ...prev, imageIds: newImageIds }));
-      
-      console.log('✅ Estado actualizado con nueva imagen');
     } catch (error) {
       console.error('❌ ERROR DETALLADO procesando imagen:', {
         message: error.message,
