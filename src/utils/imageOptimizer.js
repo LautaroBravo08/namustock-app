@@ -237,7 +237,7 @@ export const optimizeImageForAI = (file) => {
 /**
  * Verificar si una imagen necesita optimización
  */
-export const needsOptimization = (file, maxSizeMB = 2) => {
+export const needsOptimization = (file, maxSizeMB = 50) => {
   const fileSizeMB = file.size / 1024 / 1024;
   return fileSizeMB > maxSizeMB;
 };

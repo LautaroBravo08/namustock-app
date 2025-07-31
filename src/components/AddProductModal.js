@@ -9,7 +9,7 @@ import { auth } from '../firebase/config';
 const AddProductModal = ({ 
   isOpen, 
   onClose, 
-  onAddToReview, 
+  onAddProduct, 
   profitMargin, 
   roundingMultiple, 
   allowDecimals 
@@ -140,15 +140,20 @@ const AddProductModal = ({
       const unitCost = totalCost / quantity;
       const price = roundUpToMultiple(unitCost * (1 + profitMargin / 100), roundingMultiple);
 
-      onAddToReview({ 
-        id: Date.now(),
+      // Crear producto directamente para el inventario
+      const newProduct = {
+        id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: newItem.name,
-        quantity: newItem.quantity,
-        cost: unitCost.toFixed(2),
+        stock: quantity,
+        cost: unitCost,
         price: price,
+        category: 'Nuevo',
         expiryDate: newItem.expiryDate || null,
         imageIds: newItem.imageIds || []
-      });
+      };
+
+      // Agregar directamente al inventario
+      onAddProduct(newProduct);
       
       setNewItem({ name: '', quantity: '', totalCost: '', expiryDate: '', imageIds: [] });
       setImageData([]);
@@ -375,7 +380,7 @@ const AddProductModal = ({
               type="submit" 
               className="bg-[var(--color-primary)] text-[var(--color-primary-text)] py-2 px-4 rounded-lg font-semibold hover:bg-[var(--color-primary-hover)] flex items-center gap-2"
             >
-              <Plus className="h-5 w-5" />Añadir a Revisión
+              <Plus className="h-5 w-5" />Agregar al Inventario
             </button>
           </div>
         </form>

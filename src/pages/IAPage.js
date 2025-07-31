@@ -20,7 +20,7 @@ import VoiceAIModal from '../components/VoiceAIModal';
 import ImageAIModal from '../components/ImageAIModal';
 import AddProductModal from '../components/AddProductModal';
 import FloatingActionButton from '../components/FloatingActionButton';
-import EditableReviewItem from '../components/EditableReviewItem';
+
 
 const IAPage = ({ 
   products, 
@@ -33,7 +33,6 @@ const IAPage = ({
   roundingMultiple, 
   allowDecimals 
 }) => {
-  const [reviewItems, setReviewItems] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -123,54 +122,7 @@ const IAPage = ({
     return 'border-[var(--color-border)]'; // Default
   };
 
-  const handleAddToReview = (item) => {
-    setReviewItems(prev => [...prev, item]);
-  };
 
-  const handleReviewItemUpdate = (id, field, value) => {
-    setReviewItems(currentItems =>
-      currentItems.map(item => {
-        if (item.id !== id) return item;
-        
-        const updatedItem = { ...item };
-        if (field === 'totalCost') {
-          const totalCost = parseFloat(value) || 0;
-          const quantity = parseFloat(updatedItem.quantity) || 1;
-          updatedItem.cost = (totalCost / quantity).toFixed(2);
-        } else {
-          updatedItem[field] = value;
-        }
-        
-        if (field === 'cost' || field === 'quantity' || field === 'totalCost') {
-          const newCost = parseFloat(updatedItem.cost) || 0;
-          updatedItem.price = roundUpToMultiple(newCost * (1 + profitMargin / 100), roundingMultiple);
-        }
-        
-        return updatedItem;
-      })
-    );
-  };
-
-  const handleRemoveReviewItem = (id) => {
-    setReviewItems(currentItems => currentItems.filter(item => item.id !== id));
-  };
-
-  const handleConfirm = () => {
-    reviewItems.forEach(item => {
-      const newProduct = {
-        id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: item.name,
-        stock: parseInt(item.quantity, 10),
-        cost: parseFloat(item.cost),
-        price: parseFloat(item.price) || roundUpToMultiple(parseFloat(item.cost) * (1 + profitMargin / 100), roundingMultiple),
-        category: 'Nuevo',
-        imageIds: item.imageIds || [],
-        expiryDate: item.expiryDate || null,
-      };
-      handleAddProduct(newProduct);
-    });
-    setReviewItems([]);
-  };
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -197,20 +149,19 @@ const IAPage = ({
   };
 
   const handleProductsFoundByVoice = (foundProducts) => {
-    setReviewItems(prev => [...prev, ...foundProducts]);
-    showNotification(`${foundProducts.length} productos añadidos a revisión.`);
+    // Agregar productos directamente al inventario
+    foundProducts.forEach(product => {
+      handleAddProduct(product);
+    });
+    showNotification(`${foundProducts.length} productos agregados al inventario.`);
   };
 
   const handleProductsFoundByImage = (foundProducts) => {
-    const itemsToAdd = foundProducts.map(p => ({
-      id: Date.now() + Math.random(),
-      name: p.name,
-      quantity: p.quantity,
-      price: p.price,
-      cost: Math.round(p.price / (1 + profitMargin / 100))
-    }));
-    setReviewItems(prev => [...prev, ...itemsToAdd]);
-    showNotification(`${itemsToAdd.length} productos añadidos a revisión desde la imagen.`);
+    // Agregar productos directamente al inventario
+    foundProducts.forEach(product => {
+      handleAddProduct(product);
+    });
+    showNotification(`${foundProducts.length} productos agregados al inventario desde la imagen.`);
   };
 
   return (
@@ -250,7 +201,7 @@ const IAPage = ({
       <AddProductModal 
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}
-        onAddToReview={handleAddToReview}
+        onAddProduct={handleAddProduct}
         profitMargin={profitMargin}
         roundingMultiple={roundingMultiple}
         allowDecimals={allowDecimals}

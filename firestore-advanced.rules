@@ -62,12 +62,10 @@ service cloud.firestore {
         allow create: if request.auth != null 
           && request.auth.uid == userId
           && request.resource.data.keys().hasAll(['imageData', 'createdAt'])
-          && request.resource.data.imageData is string
-          && request.resource.data.imageData.size() < 5000000; // 5MB
+          && request.resource.data.imageData is string;
           
         allow update: if request.auth != null 
-          && request.auth.uid == userId
-          && request.resource.data.imageData.size() < 5000000;
+          && request.auth.uid == userId;
       }
     }
     
