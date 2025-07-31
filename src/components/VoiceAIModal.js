@@ -8,9 +8,49 @@ const VoiceAIModal = ({ isOpen, onClose, onProductsFound, profitMargin, rounding
   const [editableTranscript, setEditableTranscript] = useState('');
   const [status, setStatus] = useState('Inactivo');
   const [isApiSupported, setIsApiSupported] = useState(true);
+  const [reviewItems, setReviewItems] = useState([]);
   const recognitionRef = useRef(null);
 
   useBodyScrollLock(isOpen);
+
+  // Funciones para manejar la lista de revisión
+  const handleAddToReview = (items) => {
+    setReviewItems(prev => [...prev, ...items]);
+  };
+
+  const handleReviewItemUpdate = (id, field, value) => {
+    setReviewItems(currentItems =>
+      currentItems.map(item => {
+        if (item.id !== id) return item;
+        
+        const updatedItem = { ...item, [field]: value };
+        
+        // Recalcular precio si cambia quantity o cost
+        if (field === 'quantity' || field === 'cost') {
+          const quantity = parseFloat(field === 'quantity' ? value : updatedItem.quantity);
+          const cost = parseFloat(field === 'cost' ? value : updatedItem.cost);
+          if (!isNaN(quantity) && !isNaN(cost) && quantity > 0 && cost > 0) {
+            updatedItem.price = roundUpToMultiple(cost * (1 + profitMargin / 100), roundingMultiple);
+          }
+        }
+        
+        return updatedItem;
+      })
+    );
+  };
+
+  const handleRemoveReviewItem = (id) => {
+    setReviewItems(currentItems => currentItems.filter(item => item.id !== id));
+  };
+
+  const handleConfirmReview = () => {
+    if (reviewItems.length > 0) {
+      onProductsFound(reviewItems);
+      setReviewItems([]);
+      setEditableTranscript('');
+      onClose();
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -138,8 +178,10 @@ const VoiceAIModal = ({ isOpen, onClose, onProductsFound, profitMargin, rounding
     }
 
     if (foundProducts.length > 0) {
-      onProductsFound(foundProducts);
+      handleAddToReview(foundProducts);
       setEditableTranscript('');
+      setStatus(`${foundProducts.length} productos agregados a revisión`);
+      setTimeout(() => setStatus('Inactivo'), 2000);
     } else {
       setStatus("Formato no reconocido. Use: CANTIDAD NOMBRE COSTO.");
       setTimeout(() => setStatus('Inactivo'), 3000);
@@ -204,6 +246,70 @@ const VoiceAIModal = ({ isOpen, onClose, onProductsFound, profitMargin, rounding
           >
             <Bot className="h-5 w-5"/>Analizar y Agregar
           </button>
+
+          {/* Lista de Revisión */}
+          {reviewItems.length > 0 && (
+            <div className="mt-6 border-t border-[var(--color-border)] pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  Lista de Revisión ({reviewItems.length})
+                </h3>
+                <button 
+                  onClick={handleConfirmReview}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Confirmar Todo
+                </button>
+              </div>
+              
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {reviewItems.map(item => (
+                  <div key={item.id} className="bg-[var(--color-bg)] p-3 rounded-lg border border-[var(--color-border)]">
+                    <div className="flex justify-between items-start mb-2">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => handleReviewItemUpdate(item.id, 'name', e.target.value)}
+                        className="font-semibold bg-transparent border-none text-[var(--color-text-primary)] flex-grow mr-2"
+                      />
+                      <button
+                        onClick={() => handleRemoveReviewItem(item.id)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Cantidad</label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleReviewItemUpdate(item.id, 'quantity', e.target.value)}
+                          className="w-full bg-transparent border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Costo</label>
+                        <input
+                          type="number"
+                          value={item.cost}
+                          onChange={(e) => handleReviewItemUpdate(item.id, 'cost', e.target.value)}
+                          className="w-full bg-transparent border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Precio</label>
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-green-600 font-semibold">
+                          ${item.price?.toFixed(2) || '0.00'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

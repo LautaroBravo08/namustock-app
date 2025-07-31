@@ -250,7 +250,7 @@ const IAPage = ({
       <AddProductModal 
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}
-        handleAddProduct={handleAddProduct}
+        onAddToReview={handleAddToReview}
         profitMargin={profitMargin}
         roundingMultiple={roundingMultiple}
         allowDecimals={allowDecimals}
@@ -277,39 +277,7 @@ const IAPage = ({
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className={`bg-[var(--color-bg-secondary)] p-6 rounded-xl shadow-lg border border-[var(--color-border)] ${isGlowActive2 ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''} flex flex-col`}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Lista de Revisión</h2>
-            {reviewItems.length > 0 && (
-              <button 
-                onClick={handleConfirm} 
-                className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 hover:bg-green-600 transition-colors duration-200"
-              >
-                <CheckCircle className="h-5 w-5" />Publicar Todo
-              </button>
-            )}
-          </div>
-          
-          <div className={`flex-grow overflow-y-auto flex flex-col ${reviewItems.length === 0 ? 'justify-center' : 'space-y-2'}`}>
-            {reviewItems.length > 0 ? (
-              reviewItems.map(item => (
-                <EditableReviewItem 
-                  key={item.id} 
-                  item={item} 
-                  onUpdate={handleReviewItemUpdate} 
-                  onRemove={handleRemoveReviewItem}
-                  allowDecimals={allowDecimals}
-                />
-              ))
-            ) : (
-              <div className="text-center text-[var(--color-text-secondary)] py-8">
-                <p>No hay productos en revisión.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="mb-8">
         <div className={`bg-[var(--color-bg-secondary)] p-4 rounded-xl shadow-lg border border-[var(--color-border)] ${isGlowActive3 ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}>
           <div className="flex flex-wrap gap-2 justify-between items-center mb-3">
             <h2 className="text-lg font-bold text-[var(--color-text-primary)]">Inventario de la Tienda</h2>

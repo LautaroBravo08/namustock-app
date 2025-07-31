@@ -9,7 +9,7 @@ import { auth } from '../firebase/config';
 const AddProductModal = ({ 
   isOpen, 
   onClose, 
-  handleAddProduct, 
+  onAddToReview, 
   profitMargin, 
   roundingMultiple, 
   allowDecimals 
@@ -17,7 +17,7 @@ const AddProductModal = ({
   const [newItem, setNewItem] = useState({ 
     name: '', 
     quantity: '', 
-    price: '', 
+    totalCost: '', 
     expiryDate: '',
     imageIds: []
   });
@@ -27,7 +27,17 @@ const AddProductModal = ({
   
   useBodyScrollLock(isOpen);
 
-
+  const calculatedValues = useMemo(() => {
+    const quantity = parseFloat(newItem.quantity);
+    const totalCost = parseFloat(newItem.totalCost);
+    
+    if (quantity > 0 && totalCost > 0) {
+      const unitCost = totalCost / quantity;
+      const finalPrice = roundUpToMultiple(unitCost * (1 + profitMargin / 100), roundingMultiple);
+      return { unitCost: unitCost, finalPrice };
+    }
+    return { unitCost: 0, finalPrice: 0 };
+  }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
 
   // Función ultra simple - solo convierte a base64 sin procesamiento
   const processImage = (file) => {
@@ -124,19 +134,23 @@ const AddProductModal = ({
 
   const handleAdd = (e) => {
     e.preventDefault();
-    if (newItem.name && newItem.quantity > 0 && newItem.price > 0) {
-      const newProduct = {
-        id: `prod_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    if (newItem.name && newItem.quantity > 0 && newItem.totalCost > 0) {
+      const quantity = parseFloat(newItem.quantity);
+      const totalCost = parseFloat(newItem.totalCost);
+      const unitCost = totalCost / quantity;
+      const price = roundUpToMultiple(unitCost * (1 + profitMargin / 100), roundingMultiple);
+
+      onAddToReview({ 
+        id: Date.now(),
         name: newItem.name,
-        stock: parseFloat(newItem.quantity),
-        price: roundUpToMultiple(parseFloat(newItem.price), roundingMultiple),
+        quantity: newItem.quantity,
+        cost: unitCost.toFixed(2),
+        price: price,
         expiryDate: newItem.expiryDate || null,
         imageIds: newItem.imageIds || []
-      };
-
-      handleAddProduct(newProduct);
+      });
       
-      setNewItem({ name: '', quantity: '', price: '', expiryDate: '', imageIds: [] });
+      setNewItem({ name: '', quantity: '', totalCost: '', expiryDate: '', imageIds: [] });
       setImageData([]);
       onClose();
     }
@@ -216,13 +230,13 @@ const AddProductModal = ({
                 />
               </div>
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-[var(--color-text-secondary)]">
-                  Precio de Venta *
+                <label htmlFor="totalCost" className="block text-sm font-medium text-[var(--color-text-secondary)]">
+                  Costo Total *
                 </label>
                 <input 
                   type="number" 
-                  id="price" 
-                  value={newItem.price} 
+                  id="totalCost" 
+                  value={newItem.totalCost} 
                   onChange={e => {
                     const value = e.target.value;
                     // Solo permitir números, puntos decimales y signos negativos
@@ -239,15 +253,15 @@ const AddProductModal = ({
                       if (value.includes('.')) {
                         const parts = value.split('.');
                         if (parts[1] && parts[1].length <= 2) {
-                          setNewItem({...newItem, price: value});
+                          setNewItem({...newItem, totalCost: value});
                         }
                       } else {
-                        setNewItem({...newItem, price: value});
+                        setNewItem({...newItem, totalCost: value});
                       }
                     }
                   }} 
                   className="mt-1 block w-full border-[var(--color-border)] rounded-md shadow-sm bg-[var(--color-bg)] text-[var(--color-text-primary)]" 
-                  placeholder='Ej: 150.00' 
+                  placeholder='Ej: 7500' 
                   step="0.01"
                   max="999999.99"
                   required
@@ -326,7 +340,26 @@ const AddProductModal = ({
 
 
             </div>
-            
+
+            {/* Mostrar cálculos automáticos */}
+            {calculatedValues.unitCost > 0 && (
+              <div className="text-center p-4 bg-[var(--color-bg)] rounded-lg">
+                <div className="flex justify-around">
+                  <div>
+                    <p className="text-sm text-[var(--color-text-secondary)]">Costo Unitario</p>
+                    <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+                      ${formatNumber(calculatedValues.unitCost, allowDecimals)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--color-text-secondary)]">Precio Final</p>
+                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 animate-gradient-x">
+                      ${formatNumber(calculatedValues.finalPrice, allowDecimals)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
           
@@ -342,7 +375,7 @@ const AddProductModal = ({
               type="submit" 
               className="bg-[var(--color-primary)] text-[var(--color-primary-text)] py-2 px-4 rounded-lg font-semibold hover:bg-[var(--color-primary-hover)] flex items-center gap-2"
             >
-              <Plus className="h-5 w-5" />Agregar al Inventario
+              <Plus className="h-5 w-5" />Añadir a Revisión
             </button>
           </div>
         </form>

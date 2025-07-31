@@ -454,6 +454,52 @@ const handleFileChange = async (event) => {
 
 **Estado**: ✅ Completado exitosamente
 
+### 2025-07-30 - Restauración de Costo Total y Reorganización de Lista de Revisión
+**Actividad**: Restaurar "Costo Total" en AddProductModal y mover lista de revisión a modales flotantes
+**Descripción**: 
+- **Solicitud**: Mantener "Costo Total" en modal, quitarlo del inventario, mover revisión a modales flotantes
+- **Implementación**: Sistema híbrido con cálculos automáticos en modal y listas integradas en IA
+
+**Cambios implementados**:
+- ✅ **AddProductModal restaurado completamente**:
+  - Campo "Costo Total" restaurado
+  - Cálculos automáticos (Costo Unitario → Precio Final)
+  - Botón "Añadir a Revisión" (no directo al inventario)
+  - Visualización de cálculos en tiempo real
+- ✅ **VoiceAIModal con lista de revisión integrada**:
+  - Lista de revisión propia dentro del modal flotante
+  - Funciones completas de edición (nombre, cantidad, costo)
+  - Cálculo automático de precios
+  - Botón "Confirmar Todo" para enviar al inventario
+- ✅ **ImageAIModal con lista de revisión integrada**:
+  - Lista de revisión propia dentro del modal flotante
+  - Mismas funcionalidades que VoiceAIModal
+  - Productos simulados con cálculos automáticos
+- ✅ **IAPage simplificado**:
+  - Eliminada sección "Lista de Revisión" de la pestaña IA
+  - Solo muestra inventario de la tienda
+  - Inventario simplificado (solo Stock y Precio)
+
+**Flujo actualizado**:
+1. **Agregar manual** (botón +) → AddProductModal → Lista de Revisión → Inventario
+2. **Agregar por voz** → VoiceAIModal (con revisión integrada) → Inventario
+3. **Agregar por foto** → ImageAIModal (con revisión integrada) → Inventario
+
+**Archivos modificados**:
+- ✅ `src/components/AddProductModal.js` - Restaurado sistema completo de Costo Total
+- ✅ `src/components/VoiceAIModal.js` - Lista de revisión integrada
+- ✅ `src/components/ImageAIModal.js` - Lista de revisión integrada
+- ✅ `src/pages/IAPage.js` - Eliminada lista de revisión, inventario simplificado
+
+**Beneficios obtenidos**:
+- ✅ **Mejor organización**: Lista de revisión donde se necesita (modales de IA)
+- ✅ **Flujo más lógico**: Revisión integrada en el contexto de cada método
+- ✅ **UI más limpia**: Pestaña IA solo muestra inventario
+- ✅ **Funcionalidad completa**: Costo Total con cálculos automáticos restaurado
+- ✅ **Experiencia mejorada**: Revisión inmediata en modales flotantes
+
+**Estado**: ✅ Completado exitosamente
+
 ---
 
 ## Próximas Actividades Planificadas
@@ -464,10 +510,11 @@ const handleFileChange = async (event) => {
 - [x] ✅ Simplificar sistema de imágenes ultra extremo - **COMPLETADO**
 - [x] ✅ Eliminar debugging y crear sistema minimalista absoluto - **COMPLETADO**
 - [x] ✅ Simplificar UI de inventario y optimizar flujo de productos - **COMPLETADO**
+- [x] ✅ Restaurar Costo Total y reorganizar lista de revisión - **COMPLETADO**
 - [ ] Verificar que las actualizaciones automáticas detecten el nuevo release v1.1.0
 - [ ] Probar el sistema minimalista de imágenes en la aplicación
 - [ ] Probar descarga e instalación del APK desde GitHub
-- [ ] Probar el nuevo flujo simplificado de agregado de productos
+- [ ] Probar el nuevo flujo con listas de revisión integradas en modales flotantes
 
 ## Notas Importantes
 - Este documento se actualizará con cada cambio significativo en el proyecto

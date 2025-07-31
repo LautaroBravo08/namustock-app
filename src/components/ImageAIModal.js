@@ -9,11 +9,51 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
   const [sourceType, setSourceType] = useState('upload');
   const [imageUrl, setImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [reviewItems, setReviewItems] = useState([]);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const { isGlowActive } = useRandomGlow(isOpen && themeType === 'dark');
 
   useBodyScrollLock(isOpen);
+
+  // Funciones para manejar la lista de revisión
+  const handleAddToReview = (items) => {
+    setReviewItems(prev => [...prev, ...items]);
+  };
+
+  const handleReviewItemUpdate = (id, field, value) => {
+    setReviewItems(currentItems =>
+      currentItems.map(item => {
+        if (item.id !== id) return item;
+        
+        const updatedItem = { ...item, [field]: value };
+        
+        // Recalcular precio si cambia quantity o cost
+        if (field === 'quantity' || field === 'cost') {
+          const quantity = parseFloat(field === 'quantity' ? value : updatedItem.quantity);
+          const cost = parseFloat(field === 'cost' ? value : updatedItem.cost);
+          if (!isNaN(quantity) && !isNaN(cost) && quantity > 0 && cost > 0) {
+            updatedItem.price = roundUpToMultiple(cost * (1 + profitMargin / 100), roundingMultiple);
+          }
+        }
+        
+        return updatedItem;
+      })
+    );
+  };
+
+  const handleRemoveReviewItem = (id) => {
+    setReviewItems(currentItems => currentItems.filter(item => item.id !== id));
+  };
+
+  const handleConfirmReview = () => {
+    if (reviewItems.length > 0) {
+      onProductsFound(reviewItems);
+      setReviewItems([]);
+      setImageSrc(null);
+      onClose();
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -106,20 +146,29 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
     setTimeout(() => {
       const mockProducts = [
         { 
+          id: Date.now() + Math.random(),
           name: 'Producto de Imagen 1', 
           quantity: Math.floor(Math.random() * 5) + 1, 
-          price: roundUpToMultiple(Math.floor(Math.random() * 100) + 20, roundingMultiple) 
+          cost: Math.floor(Math.random() * 50) + 10,
+          price: 0 // Se calculará automáticamente
         },
         { 
+          id: Date.now() + Math.random() + 1,
           name: 'Producto de Imagen 2', 
           quantity: Math.floor(Math.random() * 3) + 1, 
-          price: roundUpToMultiple(Math.floor(Math.random() * 200) + 50, roundingMultiple) 
+          cost: Math.floor(Math.random() * 80) + 20,
+          price: 0 // Se calculará automáticamente
         },
       ];
-      onProductsFound(mockProducts);
+      
+      // Calcular precios automáticamente
+      const productsWithPrices = mockProducts.map(product => ({
+        ...product,
+        price: roundUpToMultiple(product.cost * (1 + profitMargin / 100), roundingMultiple)
+      }));
+      
+      handleAddToReview(productsWithPrices);
       setIsLoading(false);
-      onClose();
-      setImageSrc(null);
     }, 2500);
   };
 
@@ -240,6 +289,70 @@ const ImageAIModal = ({ isOpen, onClose, onProductsFound, themeType, profitMargi
               )}
             </button>
           </div>
+
+          {/* Lista de Revisión */}
+          {reviewItems.length > 0 && (
+            <div className="mt-6 border-t border-[var(--color-border)] pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                  Lista de Revisión ({reviewItems.length})
+                </h3>
+                <button 
+                  onClick={handleConfirmReview}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Confirmar Todo
+                </button>
+              </div>
+              
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {reviewItems.map(item => (
+                  <div key={item.id} className="bg-[var(--color-bg)] p-3 rounded-lg border border-[var(--color-border)]">
+                    <div className="flex justify-between items-start mb-2">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => handleReviewItemUpdate(item.id, 'name', e.target.value)}
+                        className="font-semibold bg-transparent border-none text-[var(--color-text-primary)] flex-grow mr-2"
+                      />
+                      <button
+                        onClick={() => handleRemoveReviewItem(item.id)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Cantidad</label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => handleReviewItemUpdate(item.id, 'quantity', e.target.value)}
+                          className="w-full bg-transparent border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Costo</label>
+                        <input
+                          type="number"
+                          value={item.cost}
+                          onChange={(e) => handleReviewItemUpdate(item.id, 'cost', e.target.value)}
+                          className="w-full bg-transparent border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-[var(--color-text-secondary)]">Precio</label>
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-green-600 font-semibold">
+                          ${item.price?.toFixed(2) || '0.00'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
