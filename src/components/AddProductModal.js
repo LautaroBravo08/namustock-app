@@ -39,7 +39,7 @@ const AddProductModal = ({
     return { unitCost: 0, finalPrice: 0 };
   }, [newItem.quantity, newItem.totalCost, profitMargin, roundingMultiple]);
 
-  // Función robusta para procesar imágenes con múltiples métodos (idéntica al EditProductModal)
+  // Función robusta para procesar imágenes con múltiples métodos y fallbacks
   const processImage = (file) => {
     return new Promise((resolve, reject) => {
       console.log('🔍 DEBUG processImage: Iniciando procesamiento híbrido');
@@ -47,7 +47,9 @@ const AddProductModal = ({
         name: file.name,
         type: file.type,
         size: file.size,
-        lastModified: new Date(file.lastModified).toISOString()
+        lastModified: new Date(file.lastModified).toISOString(),
+        webkitRelativePath: file.webkitRelativePath || 'N/A',
+        stream: typeof file.stream === 'function' ? 'Disponible' : 'No disponible'
       });
       
       const processImageData = (imageSrc) => {
@@ -142,36 +144,115 @@ const AddProductModal = ({
         img.src = imageSrc;
       };
 
-      // Usar FileReader directamente (más confiable)
+      // Función de fallback usando URL.createObjectURL
+      const tryObjectURL = () => {
+        console.log('🔍 DEBUG processImage: Intentando método alternativo con URL.createObjectURL...');
+        try {
+          const objectURL = URL.createObjectURL(file);
+          console.log('🔍 DEBUG processImage: ObjectURL creado exitosamente:', objectURL);
+          
+          processImageData(objectURL);
+          
+          // Limpiar el object URL después de usarlo
+          setTimeout(() => {
+            URL.revokeObjectURL(objectURL);
+            console.log('🔍 DEBUG processImage: ObjectURL limpiado');
+          }, 1000);
+          
+        } catch (objectURLError) {
+          console.error('❌ DEBUG processImage: Error con ObjectURL:', objectURLError);
+          reject(new Error(`Error procesando imagen con método alternativo: ${objectURLError.message}`));
+        }
+      };
+
+      // Usar FileReader directamente (método principal)
       console.log('🔍 DEBUG processImage: Usando FileReader directamente...');
       const reader = new FileReader();
       
       reader.onload = (e) => {
         console.log('🔍 DEBUG processImage: FileReader exitoso');
-        console.log('🔍 DEBUG processImage: Longitud del resultado:', e.target.result.length);
+        console.log('🔍 DEBUG processImage: Longitud del resultado:', e.target.result?.length || 'undefined');
         console.log('🔍 DEBUG processImage: Tipo de resultado:', typeof e.target.result);
-        console.log('🔍 DEBUG processImage: Primeros 50 caracteres:', e.target.result.substring(0, 50));
         
-        // Validar que el resultado sea un data URL válido
-        if (!e.target.result.startsWith('data:image/')) {
-          reject(new Error('El archivo no es una imagen válida'));
-          return;
+        if (e.target.result) {
+          console.log('🔍 DEBUG processImage: Primeros 50 caracteres:', e.target.result.substring(0, 50));
+          
+          // Validar que el resultado sea un data URL válido
+          if (!e.target.result.startsWith('data:image/')) {
+            console.error('❌ DEBUG processImage: Resultado no es data URL válido');
+            tryObjectURL(); // Intentar método alternativo
+            return;
+          }
+          
+          processImageData(e.target.result);
+        } else {
+          console.error('❌ DEBUG processImage: Resultado del FileReader es null/undefined');
+          tryObjectURL(); // Intentar método alternativo
         }
-        
-        processImageData(e.target.result);
       };
       
       reader.onerror = (error) => {
         console.error('❌ DEBUG processImage: FileReader falló:', error);
-        reject(new Error('Error al leer el archivo de imagen'));
+        console.error('❌ DEBUG processImage: Error details:', {
+          type: error.type,
+          target: error.target,
+          loaded: error.loaded,
+          total: error.total,
+          readyState: reader.readyState,
+          error: reader.error
+        });
+        
+        // Obtener más información del error
+        const errorMessage = error.target?.error?.message || reader.error?.message || 'Error desconocido al leer el archivo';
+        console.error('❌ DEBUG processImage: Error específico:', errorMessage);
+        
+        // Intentar método alternativo antes de fallar completamente
+        console.log('🔍 DEBUG processImage: Intentando método alternativo después del error...');
+        tryObjectURL();
+      };
+      
+      reader.onabort = () => {
+        console.error('❌ DEBUG processImage: FileReader fue abortado');
+        tryObjectURL();
       };
       
       try {
         console.log('🔍 DEBUG processImage: Iniciando FileReader.readAsDataURL...');
+        console.log('🔍 DEBUG processImage: Validando archivo antes de leer:', {
+          isFile: file instanceof File,
+          isBlob: file instanceof Blob,
+          hasName: !!file.name,
+          hasType: !!file.type,
+          hasSize: typeof file.size === 'number',
+          size: file.size,
+          constructor: file.constructor.name,
+          lastModified: file.lastModified
+        });
+        
+        // Validación adicional del archivo
+        if (!(file instanceof File) && !(file instanceof Blob)) {
+          throw new Error('El objeto no es un archivo válido');
+        }
+        
+        if (file.size === 0) {
+          throw new Error('El archivo está vacío');
+        }
+        
+        if (file.size > 50 * 1024 * 1024) { // 50MB límite
+          throw new Error('El archivo es demasiado grande (máximo 50MB)');
+        }
+        
+        // Verificar que el FileReader esté disponible
+        if (typeof FileReader === 'undefined') {
+          throw new Error('FileReader no está disponible en este navegador');
+        }
+        
         reader.readAsDataURL(file);
+        
       } catch (error) {
         console.error('❌ DEBUG processImage: Error iniciando FileReader:', error);
-        reject(new Error('Error al iniciar la lectura del archivo'));
+        console.log('🔍 DEBUG processImage: Intentando método alternativo después del error de inicialización...');
+        tryObjectURL();
       }
     });
   };
