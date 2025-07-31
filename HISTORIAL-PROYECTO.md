@@ -415,6 +415,45 @@ const handleFileChange = async (event) => {
 
 **Estado**: ✅ Completado exitosamente - Sistema minimalista absoluto
 
+### 2025-07-30 - Simplificación de UI y Flujo de Productos
+**Actividad**: Optimización de la interfaz de inventario y flujo de agregado de productos
+**Descripción**: 
+- **Objetivo**: Simplificar la vista de inventario, eliminar "Costo Total" y optimizar el flujo
+- **Cambios**: AddProductModal va directo al inventario, lista de revisión solo para IA
+
+**Cambios implementados**:
+- ✅ **ProductCard simplificado**: Diseño más compacto, botones más pequeños
+- ✅ **ProductListItem simplificado**: Imagen 12x12px, layout más compacto
+- ✅ **AddProductModal rediseñado**: 
+  - Eliminado campo "Costo Total"
+  - Agregado campo "Precio de Venta" directo
+  - Va directamente al inventario (no a revisión)
+  - Botón cambiado a "Agregar al Inventario"
+- ✅ **Flujo optimizado**: 
+  - Botón "+" → Directo al inventario
+  - Lista de revisión solo para IA (voz y foto)
+  - Eliminado cálculo de costo unitario automático
+
+**Archivos modificados**:
+- ✅ `src/components/ProductCard.js` - Diseño más compacto
+- ✅ `src/components/ProductListItem.js` - Layout simplificado
+- ✅ `src/components/AddProductModal.js` - Flujo directo al inventario
+- ✅ `src/pages/IAPage.js` - Actualizado para usar nuevo flujo
+
+**Beneficios obtenidos**:
+- ✅ **UI más limpia**: Menos información visual, más espacio
+- ✅ **Flujo más rápido**: Agregar productos es más directo
+- ✅ **Menos confusión**: Lista de revisión solo para casos específicos (IA)
+- ✅ **Mejor UX**: Menos pasos para agregar productos manualmente
+- ✅ **Diseño responsive**: Mejor uso del espacio en pantallas pequeñas
+
+**Flujo actualizado**:
+1. **Agregar manual** (botón +) → Directo al inventario
+2. **Agregar por voz** → Lista de revisión → Inventario
+3. **Agregar por foto** → Lista de revisión → Inventario
+
+**Estado**: ✅ Completado exitosamente
+
 ---
 
 ## Próximas Actividades Planificadas
@@ -424,10 +463,11 @@ const handleFileChange = async (event) => {
 - [x] ✅ Simplificar sistema de imágenes completamente - **COMPLETADO**
 - [x] ✅ Simplificar sistema de imágenes ultra extremo - **COMPLETADO**
 - [x] ✅ Eliminar debugging y crear sistema minimalista absoluto - **COMPLETADO**
+- [x] ✅ Simplificar UI de inventario y optimizar flujo de productos - **COMPLETADO**
 - [ ] Verificar que las actualizaciones automáticas detecten el nuevo release v1.1.0
 - [ ] Probar el sistema minimalista de imágenes en la aplicación
 - [ ] Probar descarga e instalación del APK desde GitHub
-- [ ] Confirmar que el sistema minimalista resuelve definitivamente todos los errores
+- [ ] Probar el nuevo flujo simplificado de agregado de productos
 
 ## Notas Importantes
 - Este documento se actualizará con cada cambio significativo en el proyecto

@@ -158,28 +158,23 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
             
             <div className="product-card-info">
               <div className="product-card-header">
-                <h3 className="product-card-title">{product.name}</h3>
-                <p className="product-card-price">
+                <h3 className="product-card-title text-sm">{product.name}</h3>
+                <p className="product-card-price text-lg">
                   ${formatNumber(displayPrice, allowDecimals)}
                 </p>
               </div>
               
               <div className="product-card-footer">
-                <div className="product-card-stock-container">
-                  <span className={`product-card-stock-number ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {product.stock > 0 ? product.stock : '0'}
-                  </span>
-                  <span className="product-card-stock-label">
-                    {product.stock > 0 ? 'unidades' : 'agotado'}
-                  </span>
-                </div>
+                <span className={`text-xs font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {product.stock > 0 ? `${product.stock} unidades` : 'Agotado'}
+                </span>
                 
                 <button 
                   onClick={() => addToCart(product)} 
                   disabled={product.stock === 0} 
-                  className="product-card-add-button"
+                  className="product-card-add-button p-1.5"
                 >
-                  <ShoppingCart className="h-4 w-4" />
+                  <ShoppingCart className="h-3 w-3" />
                 </button>
               </div>
             </div>

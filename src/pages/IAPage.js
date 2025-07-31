@@ -250,7 +250,7 @@ const IAPage = ({
       <AddProductModal 
         isOpen={isAddProductModalOpen}
         onClose={() => setIsAddProductModalOpen(false)}
-        onAddToReview={handleAddToReview}
+        handleAddProduct={handleAddProduct}
         profitMargin={profitMargin}
         roundingMultiple={roundingMultiple}
         allowDecimals={allowDecimals}
