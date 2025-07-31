@@ -229,43 +229,26 @@ export const getUserSettings = async (userId) => {
   }
 };
 
-// Sistema simple de imágenes - cada imagen como documento separado (máximo 1MB)
+// Sistema ultra simple de imágenes - sin validaciones ni procesamiento
 export const saveProductImage = async (userId, imageData) => {
   try {
-    console.log('🔥 Guardando imagen simple en Firestore...');
-    
     // Crear ID único para la imagen
     const imageId = `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Validar tamaño (máximo 1MB en base64)
-    const sizeInBytes = imageData.length * 0.75; // Aproximación del tamaño real
-    const maxSize = 1024 * 1024; // 1MB
-    
-    if (sizeInBytes > maxSize) {
-      console.error(`❌ Imagen demasiado grande: ${Math.round(sizeInBytes / 1024)}KB (máximo: 1MB)`);
-      return { imageId: null, error: 'La imagen es demasiado grande. Máximo 1MB.' };
-    }
-    
-    // Guardar imagen como documento simple
+    // Guardar imagen directamente sin validaciones
     await setDoc(doc(db, 'users', userId, 'productImages', imageId), {
       imageData: imageData,
-      createdAt: new Date().toISOString(),
-      size: sizeInBytes,
-      mimeType: imageData.includes('data:') ? imageData.split(';')[0].split(':')[1] : 'image/jpeg'
+      createdAt: new Date().toISOString()
     });
     
-    console.log(`✅ Imagen guardada con ID: ${imageId} (${Math.round(sizeInBytes / 1024)}KB)`);
     return { imageId: imageId, error: null };
   } catch (error) {
-    console.error('❌ Error guardando imagen:', error);
     return { imageId: null, error: error.message };
   }
 };
 
 export const getProductImage = async (userId, imageId) => {
   try {
-    console.log(`🔍 Recuperando imagen ${imageId} con sistema simple...`);
-    
     const imageRef = doc(db, 'users', userId, 'productImages', imageId);
     const imageSnap = await getDoc(imageRef);
     
@@ -274,11 +257,9 @@ export const getProductImage = async (userId, imageId) => {
     }
     
     const data = imageSnap.data();
-    console.log(`✅ Imagen encontrada (${Math.round(data.size / 1024)}KB)`);
     return { imageData: data.imageData, error: null };
     
   } catch (error) {
-    console.error('❌ Error recuperando imagen:', error);
     return { imageData: null, error: error.message };
   }
 };

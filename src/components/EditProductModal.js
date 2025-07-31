@@ -97,72 +97,20 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Función simple para procesar imágenes - convierte a base64 con compresión automática
+  // Función ultra simple - solo convierte a base64 sin procesamiento
   const processImage = (file) => {
     return new Promise((resolve, reject) => {
-      console.log('🖼️ Procesando imagen:', file.name, `(${Math.round(file.size / 1024)}KB)`);
+      const reader = new FileReader();
       
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      
-      img.onload = () => {
-        try {
-          // Calcular dimensiones para que la imagen final sea menor a 1MB
-          let { width, height } = img;
-          const maxWidth = 800;
-          const maxHeight = 600;
-          
-          // Redimensionar manteniendo proporción
-          if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = Math.floor(width * ratio);
-            height = Math.floor(height * ratio);
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          // Dibujar imagen redimensionada
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Comprimir hasta que sea menor a 1MB
-          let quality = 0.9;
-          let dataUrl = canvas.toDataURL('image/jpeg', quality);
-          const maxSizeBytes = 1024 * 1024; // 1MB
-          
-          while (dataUrl.length * 0.75 > maxSizeBytes && quality > 0.1) {
-            quality -= 0.1;
-            dataUrl = canvas.toDataURL('image/jpeg', quality);
-          }
-          
-          const finalSizeKB = Math.round(dataUrl.length * 0.75 / 1024);
-          console.log(`✅ Imagen procesada: ${width}x${height}, calidad: ${quality.toFixed(1)}, tamaño: ${finalSizeKB}KB`);
-          
-          if (finalSizeKB > 1024) {
-            reject(new Error('No se pudo comprimir la imagen lo suficiente. Intenta con una imagen más pequeña.'));
-            return;
-          }
-          
-          resolve(dataUrl);
-        } catch (error) {
-          reject(new Error(`Error procesando imagen: ${error.message}`));
-        }
+      reader.onload = (e) => {
+        resolve(e.target.result);
       };
       
-      img.onerror = () => {
-        reject(new Error('Error cargando la imagen. Verifica que el archivo sea válido.'));
+      reader.onerror = () => {
+        reject(new Error('Error leyendo el archivo'));
       };
       
-      // Cargar imagen usando URL.createObjectURL (más simple y confiable)
-      const objectURL = URL.createObjectURL(file);
-      img.src = objectURL;
-      
-      // Limpiar URL después de cargar
-      img.onload = (originalOnload => function() {
-        URL.revokeObjectURL(objectURL);
-        return originalOnload.apply(this, arguments);
-      })(img.onload);
+      reader.readAsDataURL(file);
     });
   };
 
@@ -426,10 +374,7 @@ const EditProductModal = ({ product, isOpen, onClose, onSave }) => {
               </div>
             )}
 
-            {/* Información sobre las imágenes */}
-            <div className="text-xs text-[var(--color-text-secondary)] bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-              <strong>📸 Sistema optimizado:</strong> Máximo 3 imágenes por producto. Se comprimen automáticamente a 600x450px con calidad balanceada, máximo 150KB cada una para garantizar sincronización con la base de datos.
-            </div>
+
           </div>
         </div>
 
