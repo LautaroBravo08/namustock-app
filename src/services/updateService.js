@@ -26,7 +26,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.1.51'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.52'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -428,7 +428,8 @@ class UpdateService {
 
       // MÉTODO 1: Usar Capacitor Permissions para permisos básicos
       try {
-        const { Permissions } = await import('@capacitor/permissions');
+        const permissionsPackage = '@capacitor/permissions';
+        const { Permissions } = await import(permissionsPackage);
         
         // Solicitar permisos de almacenamiento
         const storageResult = await Permissions.requestPermissions({
@@ -689,7 +690,6 @@ class UpdateService {
         }
       } catch (error) {
         console.error('❌ Fetch directo falló:', error);
-        fetchError = error;
         response = null;
       }
       
@@ -994,7 +994,8 @@ class UpdateService {
 
       // Intentar usar el plugin de permisos de Capacitor
       try {
-        const { Permissions } = await import('@capacitor/permissions');
+        const permissionsPackage = '@capacitor/permissions';
+        const { Permissions } = await import(permissionsPackage);
         
         // Verificar si el permiso está disponible
         const result = await Permissions.query({ name: 'camera' }); // Usar camera como proxy
