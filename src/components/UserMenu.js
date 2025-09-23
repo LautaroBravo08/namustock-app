@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug } from 'lucide-react';
+import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug, Heart } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import updateService from '../services/updateService';
 
@@ -8,6 +8,7 @@ const UserMenu = ({
   onAppearanceClick, 
   onSettingsClick, 
   onImportExportClick, 
+  onOpenSupportModal, 
   showNotification 
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,7 +18,7 @@ const UserMenu = ({
   // Obtener versión de la aplicación
   const getAppVersion = () => {
     // HARDCODEAR versión igual que en updateService - NO USAR PROCESS.ENV
-    const hardcodedVersion = '1.1.55'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.56'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     return `v${hardcodedVersion}`;
   };
 
@@ -140,6 +141,14 @@ const UserMenu = ({
           >
             <RefreshCw className={`h-4 w-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} /> 
             {isCheckingUpdates ? 'Comprobando...' : 'Comprobar actualizaciones'}
+          </button>
+
+          <button
+            onClick={() => { onOpenSupportModal(); setIsMenuOpen(false); }}
+            className="w-full text-left px-4 py-2 text-sm text-yellow-500 hover:bg-yellow-50 flex items-center gap-2 font-semibold"
+          >
+            <Heart className="h-4 w-4" /> 
+            Apoyar el Proyecto
           </button>
 
           <button 
