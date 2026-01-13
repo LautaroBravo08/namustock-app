@@ -1,6 +1,6 @@
 {
-  "version": "1.1.73",
-  "buildDate": "2026-01-13T11:14:09.106Z",
+  "version": "1.1.74",
+  "buildDate": "2026-01-13T11:18:22.799Z",
   "platform": "android",
   "features": [
     "Sistema de inventario completo",
@@ -10,10 +10,10 @@
     "Notificaciones mejoradas",
     "Interfaz de usuario actualizada"
   ],
-  "releaseNotes": "Versión 1.1.73 con sistema de imágenes optimizado y mejoras de rendimiento",
+  "releaseNotes": "Versión 1.1.74 con sistema de imágenes optimizado y mejoras de rendimiento",
   "downloads": {
-    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.1.73/namustock-1.1.73.apk",
-    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.1.73/namustock-1.1.73.ipa"
+    "android": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.1.74/namustock-1.1.74.apk",
+    "ios": "https://github.com/LautaroBravo08/namustock-app/releases/download/v1.1.74/namustock-1.1.74.ipa"
   },
   "baseUrl": "https://github.com/LautaroBravo08/namustock-app"
 }

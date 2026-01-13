@@ -19,7 +19,7 @@ const UserMenu = ({
   // Obtener versión de la aplicación
   const getAppVersion = () => {
     // HARDCODEAR versión igual que en updateService - NO USAR PROCESS.ENV
-    const hardcodedVersion = '1.1.73'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.74'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     return `v${hardcodedVersion}`;
   };
 
