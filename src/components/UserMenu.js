@@ -8,9 +8,7 @@ const UserMenu = ({
   onAppearanceClick, 
   onSettingsClick, 
   onImportExportClick, 
-  onOpenPremiumModal, 
-  showNotification,
-  isPremium = false
+  showNotification
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
@@ -19,7 +17,7 @@ const UserMenu = ({
   // Obtener versión de la aplicación
   const getAppVersion = () => {
     // HARDCODEAR versión igual que en updateService - NO USAR PROCESS.ENV
-    const hardcodedVersion = '1.1.74'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.75'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     return `v${hardcodedVersion}`;
   };
 
@@ -142,19 +140,6 @@ const UserMenu = ({
           >
             <RefreshCw className={`h-4 w-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} /> 
             {isCheckingUpdates ? 'Comprobando...' : 'Comprobar actualizaciones'}
-          </button>
-
-          <button
-            onClick={() => { onOpenPremiumModal(); setIsMenuOpen(false); }}
-            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 font-semibold transition-colors ${
-              isPremium 
-                ? 'text-yellow-400 hover:bg-yellow-50/10 cursor-default'
-                : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600'
-            }`}
-            disabled={isPremium}
-          >
-            <Star className="h-4 w-4" /> 
-            {isPremium ? 'Premium Activo' : 'Mejorar a Premium'}
           </button>
 
           <button 
