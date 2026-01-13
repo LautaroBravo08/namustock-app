@@ -39,7 +39,7 @@ class UpdateService {
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.1.76'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.77'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -180,56 +180,44 @@ class UpdateService {
     return { available: false, platform: 'electron' };
   }
 
-  // Verificar actualizaciones para móvil desde Firebase Storage
+  // Verificar actualizaciones para móvil desde GitHub Releases
   async checkMobileUpdate() {
     try {
       const platform = Capacitor.getPlatform();
-      console.log(`🔍 Verificando actualizaciones para ${platform}...`);
+      console.log(`🔍 Verificando actualizaciones para ${platform} desde GitHub...`);
       console.log(`📱 Versión actual: ${this.currentVersion}`);
 
-      // Verificar desde Firebase
-      if (!this.db) {
-        console.log('❌ Firebase no está inicializado');
-        return { available: false, platform: platform };
+      const response = await fetch('https://api.github.com/repos/LautaroBravo08/namustock-app/releases/latest');
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
       }
 
-      // Obtener información de la última versión desde Firebase
-      const appVersionRef = doc(this.db, 'appConfig', 'version');
-      const versionDoc = await getDoc(appVersionRef);
+      const latestRelease = await response.json();
+      const latestVersion = latestRelease.tag_name.replace('v', ''); // Remove 'v' prefix if present
 
-      if (!versionDoc.exists()) {
-        console.log('❌ No se encontró información de versión en Firebase');
-        return { available: false, platform: platform };
-      }
+      console.log('📱 Última versión en GitHub:', latestVersion);
 
-      const versionData = versionDoc.data();
-      const latestVersion = versionData.version;
-      
-      console.log('📱 Última versión disponible:', latestVersion);
-      
-      // Comparar versiones
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
-        // Obtener URL de descarga desde Firebase Storage
-        const downloadUrl = await this.getFirebaseDownloadUrl(versionData.storagePath, latestVersion);
+        const downloadUrl = this.getMobileDownloadUrl(latestRelease);
         
-        return {
-          available: true,
-          version: latestVersion,
-          currentVersion: this.currentVersion,
-          notes: versionData.notes || 'Nueva versión disponible',
-          downloadUrl: downloadUrl,
-          storagePath: versionData.storagePath,
-          fileSize: versionData.fileSize || 'Desconocido',
-          releaseDate: versionData.releaseDate ? new Date(versionData.releaseDate.toDate()) : new Date(),
-          platform: platform,
-          type: 'firebase-storage'
-        };
+        if (downloadUrl) {
+           return {
+            available: true,
+            version: latestVersion,
+            currentVersion: this.currentVersion,
+            notes: latestRelease.body || 'Nueva versión disponible',
+            downloadUrl: downloadUrl,
+            releaseDate: new Date(latestRelease.published_at),
+            platform: platform,
+            type: 'github-release'
+          };
+        }
       }
       
       return { available: false, platform: platform };
 
     } catch (error) {
-      console.error('❌ Error verificando actualizaciones:', error);
+      console.error('❌ Error verificando actualizaciones en GitHub:', error);
       return { available: false, platform: Capacitor.getPlatform() };
     }
   }
