@@ -1,0 +1,35 @@
+// Reglas de seguridad para Firebase Storage
+// Copiar estas reglas en la consola de Firebase Storage
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Reglas para APKs - solo lectura pública
+    match /apks/{allPaths=**} {
+      allow read: if true; // Permitir descarga pública de APKs
+      allow write: if false; // Solo administradores pueden subir APKs (usar Admin SDK)
+    }
+    
+    // Reglas para otras carpetas (mantener las existentes)
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas por defecto - denegar acceso
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// INSTRUCCIONES:
+// 1. Ve a la consola de Firebase: https://console.firebase.google.com
+// 2. Selecciona tu proyecto
+// 3. Ve a Storage > Rules
+// 4. Reemplaza las reglas existentes con las de arriba
+// 5. Haz clic en "Publicar"
+
+// NOTA IMPORTANTE:
+// - Los APKs serán públicamente descargables (necesario para actualizaciones)
+// - Solo el Admin SDK puede subir nuevos APKs (más seguro)
+// - Las demás carpetas mantienen sus permisos actuales

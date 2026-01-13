@@ -7,8 +7,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4">
-      <div className="bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-sm border border-[var(--color-border)]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex justify-center items-center p-4" onClick={onClose}>
+      <div className="bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-sm border border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 text-center">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">{title}</h2>
           <p className="text-[var(--color-text-secondary)] mb-6">{message}</p>

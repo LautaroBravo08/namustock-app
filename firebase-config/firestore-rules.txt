@@ -1,0 +1,41 @@
+// Reglas de seguridad para Firestore
+// Copiar estas reglas en la consola de Firestore
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Reglas para configuración de la app - solo lectura pública
+    match /appConfig/{document} {
+      allow read: if true; // Permitir lectura pública para verificar versiones
+      allow write: if false; // Solo administradores pueden escribir (usar Admin SDK)
+    }
+    
+    // Reglas para usuarios - mantener las existentes
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Subcolecciones de usuario
+      match /{subcollection=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Reglas por defecto - denegar acceso
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// INSTRUCCIONES:
+// 1. Ve a la consola de Firebase: https://console.firebase.google.com
+// 2. Selecciona tu proyecto
+// 3. Ve a Firestore Database > Rules
+// 4. Reemplaza las reglas existentes con las de arriba
+// 5. Haz clic en "Publicar"
+
+// NOTA IMPORTANTE:
+// - El documento appConfig/version será públicamente legible (necesario para verificar actualizaciones)
+// - Solo el Admin SDK puede modificar la configuración de versiones (más seguro)
+// - Las demás colecciones mantienen sus permisos actuales

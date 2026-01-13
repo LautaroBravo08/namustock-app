@@ -12,7 +12,24 @@ const CameraConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Intentar primero con cámara trasera específica
+      let mediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: { exact: 'environment' } // Forzar cámara trasera
+          } 
+        });
+      } catch (exactError) {
+        // Si falla, intentar con preferencia por cámara trasera
+        console.log('Exact environment not available, trying ideal...');
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: { ideal: 'environment' } // Preferir cámara trasera
+          } 
+        });
+      }
+      
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -66,8 +83,8 @@ const CameraConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-[80] flex justify-center items-center p-4">
-      <div className="bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-lg border border-[var(--color-border)] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-[80] flex justify-center items-center p-4" onClick={onClose}>
+      <div className="bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-lg border border-[var(--color-border)] p-4" onClick={(e) => e.stopPropagation()}>
         <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
           {imageSrc ? (
             <img src={imageSrc} alt="Captured" className="w-full h-full object-contain" />

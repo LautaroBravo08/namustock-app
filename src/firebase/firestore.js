@@ -207,7 +207,7 @@ export const saveUserSettings = async (userId, settings) => {
     await setDoc(doc(db, 'users', userId, 'data', 'settings'), {
       ...settings,
       lastUpdated: new Date().toISOString()
-    });
+    }, { merge: true }); // ¡IMPORTANTE! Hacer merge en lugar de sobrescribir
     return { error: null };
   } catch (error) {
     return { error: error.message };
@@ -227,6 +227,59 @@ export const getUserSettings = async (userId) => {
   } catch (error) {
     return { settings: null, error: error.message };
   }
+};
+
+// Inicializar configuración por defecto del usuario
+export const initializeUserSettings = async (userId) => {
+  try {
+    const docRef = doc(db, 'users', userId, 'data', 'settings');
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      const defaultSettings = {
+        isPremium: false,
+        theme: 'default-light',
+        glowIntensity: 0.4,
+        shadowIntensity: 0.1,
+        cardStyle: 'default',
+        profitMargin: 40,
+        roundingMultiple: 100,
+        maxProducts: 50,
+        subscriptionProvider: null,
+        subscriptionId: null,
+        subscriptionStatus: null,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await setDoc(docRef, defaultSettings);
+      console.log(`✅ Settings inicializados para usuario ${userId}`);
+      return { settings: defaultSettings, error: null };
+    }
+    
+    return { settings: docSnap.data(), error: null };
+  } catch (error) {
+    console.error('Error inicializando settings:', error);
+    return { settings: null, error: error.message };
+  }
+};
+
+// Escuchar cambios en la configuración en tiempo real
+export const onSettingsChange = (userId, callback) => {
+  const docRef = doc(db, 'users', userId, 'data', 'settings');
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      callback(doc.data());
+    } else {
+      // Si no existen settings, inicializarlos
+      initializeUserSettings(userId).then(({ settings }) => {
+        if (settings) {
+          callback(settings);
+        } else {
+          callback(null);
+        }
+      });
+    }
+  });
 };
 
 // Sistema ultra simple de imágenes - sin validaciones ni procesamiento
@@ -326,6 +379,85 @@ export const uploadProductImage = async (userId, productId, file, imageIndex) =>
 
 
 // Función helper para convertir File a Blob optimizado
+// Funciones de suscripción Premium
+export const updateUserSubscription = async (userId, subscriptionData) => {
+  try {
+    const settings = {
+      isPremium: subscriptionData.isPremium || false,
+      subscriptionProvider: subscriptionData.provider || null,
+      subscriptionId: subscriptionData.subscriptionId || null,
+      subscriptionStatus: subscriptionData.status || 'none',
+      subscriptionStartDate: subscriptionData.startDate || null,
+      subscriptionExpiryDate: subscriptionData.expiryDate || null,
+      subscriptionAmount: subscriptionData.amount || null,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    await setDoc(doc(db, 'users', userId, 'data', 'settings'), settings, { merge: true });
+    console.log('✅ Suscripción actualizada:', settings);
+    return { error: null, success: true };
+  } catch (error) {
+    console.error('❌ Error actualizando suscripción:', error);
+    return { error: error.message, success: false };
+  }
+};
+
+export const getUserSubscription = async (userId) => {
+  try {
+    const docRef = doc(db, 'users', userId, 'data', 'settings');
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        subscription: {
+          isPremium: data.isPremium || false,
+          provider: data.subscriptionProvider || null,
+          subscriptionId: data.subscriptionId || null,
+          status: data.subscriptionStatus || 'none',
+          startDate: data.subscriptionStartDate || null,
+          expiryDate: data.subscriptionExpiryDate || null,
+          amount: data.subscriptionAmount || null,
+        },
+        error: null
+      };
+    } else {
+      return {
+        subscription: {
+          isPremium: false,
+          provider: null,
+          subscriptionId: null,
+          status: 'none',
+          startDate: null,
+          expiryDate: null,
+          amount: null,
+        },
+        error: null
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error obteniendo suscripción:', error);
+    return { subscription: null, error: error.message };
+  }
+};
+
+export const cancelUserSubscription = async (userId) => {
+  try {
+    await setDoc(doc(db, 'users', userId, 'data', 'settings'), {
+      isPremium: false,
+      subscriptionStatus: 'cancelled',
+      subscriptionCancelledAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    }, { merge: true });
+    
+    console.log('✅ Suscripción cancelada para usuario:', userId);
+    return { error: null, success: true };
+  } catch (error) {
+    console.error('❌ Error cancelando suscripción:', error);
+    return { error: error.message, success: false };
+  }
+};
+
 export const optimizeImageFile = (file, maxWidth = 1200, maxHeight = 900, quality = 0.8) => {
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');

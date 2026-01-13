@@ -1,8 +1,12 @@
 // Helper functions for calculations and formatting
 
-export const roundUpToMultiple = (num, multiple) => {
+export const roundToMultiple = (num, multiple, direction = 'up') => {
   if (multiple === 0) return num;
-  return Math.ceil(num / multiple) * multiple;
+  if (direction === 'up') {
+    return Math.ceil(num / multiple) * multiple;
+  } else {
+    return Math.floor(num / multiple) * multiple;
+  }
 };
 
 export const formatNumber = (num, allowDecimals, decimalPlaces = 2) => {

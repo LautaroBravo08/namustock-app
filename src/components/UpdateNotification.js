@@ -49,9 +49,11 @@ const UpdateNotification = () => {
         setPermissionDialog(data);
         setIsPermissionDialogVisible(true);
       } else if (data.type === 'install-confirmation-dialog') {
-        // Mostrar diálogo de confirmación de instalación in-app
-        setPermissionDialog(data);
-        setIsPermissionDialogVisible(true);
+        // Responder automáticamente sin mostrar diálogo
+        updateService.notifyListeners({
+          type: 'install-confirmation-response',
+          action: 'install'
+        });
       } else if (data.type === 'ios-update-dialog') {
         // Mostrar diálogo específico de iOS
         setPermissionDialog(data);
@@ -61,12 +63,23 @@ const UpdateNotification = () => {
 
     updateService.addListener(handleUpdateAvailable);
 
-    // Iniciar verificación automática
-    updateService.startAutoCheck();
+    // Verificar actualizaciones solo al iniciar la aplicación (una vez)
+    const checkOnStartup = async () => {
+      try {
+        const update = await updateService.checkForUpdates();
+        if (update && update.available) {
+          setUpdateInfo(update);
+          setIsVisible(true);
+        }
+      } catch (error) {
+        console.error('Error verificando actualizaciones al iniciar:', error);
+      }
+    };
+
+    checkOnStartup();
 
     return () => {
       updateService.removeListener(handleUpdateAvailable);
-      updateService.stopAutoCheck();
     };
   }, []);
 
@@ -132,8 +145,8 @@ const UpdateNotification = () => {
           responseType = 'permission-dialog-response';
           break;
         case 'install-confirmation-dialog':
-          responseType = 'install-confirmation-response';
-          break;
+          // Ya no se maneja manualmente, se responde automáticamente
+          return;
         case 'ios-update-dialog':
           responseType = 'ios-dialog-response';
           break;
@@ -203,21 +216,7 @@ const UpdateNotification = () => {
             </p>
 
             {/* Mostrar detalles para diálogo de confirmación de instalación */}
-            {permissionDialog.type === 'install-confirmation-dialog' && permissionDialog.details && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  {permissionDialog.details.map((detail, index) => (
-                    <div key={index} className="flex items-start gap-3 p-3 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
-                      <div className="flex-1">
-                        <p className="text-sm text-[var(--color-text-primary)]">
-                          {detail}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Los diálogos de confirmación de instalación se manejan automáticamente */}
 
             {/* Mostrar permisos para diálogo de permisos legacy */}
             {permissionDialog.type === 'permission-explanation-dialog' && permissionDialog.permissions && permissionDialog.permissions.length > 0 && (
@@ -257,9 +256,9 @@ const UpdateNotification = () => {
             {/* Información de seguridad */}
             <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
               <p className="text-xs text-orange-700 dark:text-orange-300">
-                <strong>⚠️ Importante:</strong> {permissionDialog.type === 'install-confirmation-dialog' 
-                  ? 'Android mostrará advertencias porque NamuStock no viene de Google Play Store. Esto es completamente normal y seguro.'
-                  : 'Estos permisos son necesarios para instalar la actualización de forma segura. NamuStock solo solicita permisos esenciales para su funcionamiento.'
+                <strong>ℹ️ Información:</strong> {permissionDialog.type === 'install-confirmation-dialog' 
+                  ? 'La instalación se realizará automáticamente.'
+                  : 'Estos permisos son necesarios para instalar la actualización.'
                 }
               </p>
             </div>
@@ -276,7 +275,7 @@ const UpdateNotification = () => {
               onClick={() => handlePermissionResponse(permissionDialog.type === 'install-confirmation-dialog' ? 'install' : 'grant')}
               className="flex-1 px-4 py-2 text-sm bg-[var(--color-primary)] text-[var(--color-primary-text)] rounded-md hover:bg-[var(--color-primary-hover)] transition-colors"
             >
-              {permissionDialog.type === 'install-confirmation-dialog' ? 'Instalar in-app' : 'Conceder permisos'}
+              {permissionDialog.type === 'install-confirmation-dialog' ? 'Instalar' : 'Conceder permisos'}
             </button>
           </div>
         </div>
@@ -318,10 +317,25 @@ const UpdateNotification = () => {
             </p>
           )}
 
-          {updateInfo.releaseNotes && (
+          {updateInfo.notes && (
             <div className="text-xs text-[var(--color-text-secondary)] max-h-20 overflow-y-auto">
               <p className="font-medium mb-1">Novedades:</p>
-              <p>{updateInfo.releaseNotes.substring(0, 100)}...</p>
+              <p>{updateInfo.notes.substring(0, 100)}...</p>
+            </div>
+          )}
+
+          {/* Mostrar información de tamaño si está disponible */}
+          {updateInfo.fileSize && (
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Tamaño: {updateInfo.fileSize}
+            </p>
+          )}
+
+          {/* Mostrar tipo de actualización Firebase */}
+          {updateInfo.type === 'firebase-storage' && (
+            <div className="flex items-center gap-1 text-xs text-blue-500">
+              <span>🔥</span>
+              <span>Actualización segura desde Firebase</span>
             </div>
           )}
 
@@ -339,7 +353,7 @@ const UpdateNotification = () => {
                 ></div>
               </div>
               <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
-                La actualización se instalará automáticamente
+                Descarga directa desde Firebase Storage - Sin salir de la app
               </div>
             </div>
           )}
@@ -354,7 +368,7 @@ const UpdateNotification = () => {
                 <div className="bg-green-500 h-2 rounded-full w-full"></div>
               </div>
               <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
-                Sigue las instrucciones en pantalla para completar la instalación
+                Instalación directa desde Firebase Storage
               </div>
             </div>
           )}
@@ -363,21 +377,21 @@ const UpdateNotification = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-green-600">
                 <Download className="h-3 w-3" />
-                <span>¡Descarga iniciada!</span>
+                <span>¡Actualización completada!</span>
               </div>
               <div className="text-xs text-[var(--color-text-secondary)] opacity-75">
-                Se abrió en tu navegador para mayor seguridad
+                Instalación exitosa desde Firebase Storage
               </div>
             </div>
           )}
 
           {updateStatus === 'error' && (
             <div className="space-y-1">
-              <div className="text-xs text-blue-500 font-medium">
-                Descarga iniciada en navegador
+              <div className="text-xs text-orange-500 font-medium">
+                Instalación manual requerida
               </div>
               <div className="text-xs text-[var(--color-text-secondary)]">
-                {downloadMessage || 'Se abrió tu navegador para descargar de forma segura'}
+                {downloadMessage || 'Abre el archivo APK descargado para instalar'}
               </div>
             </div>
           )}

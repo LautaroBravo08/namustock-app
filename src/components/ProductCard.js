@@ -1,18 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ShoppingCart, ArrowLeft, ArrowRight } from 'lucide-react';
-import { roundUpToMultiple, formatNumber } from '../utils/helpers';
+import { roundToMultiple, formatNumber } from '../utils/helpers';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
-import { getMultipleProductImages } from '../firebase/firestore';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../firebase/config';
 
-const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDecimals }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
+const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, roundingDirection, allowDecimals, imageUrls, onProductClick }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [imageUrls, setImageUrls] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const cardRef = useRef(null);
-  const [user] = useAuthState(auth);
   
   // Hook de visibilidad para optimizar animaciones
   const { elementRef: visibilityRef, isVisible, hasBeenVisible } = useIntersectionObserver({
@@ -20,39 +14,9 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
     rootMargin: '100px'
   });
   
-  const displayPrice = roundUpToMultiple(product.price, roundingMultiple);
-  
-  // Cargar imágenes desde Firestore usando la nueva arquitectura
-  useEffect(() => {
-    const loadImages = async () => {
-      if (!user || !product.imageIds || product.imageIds.length === 0) {
-        // Si no hay imageIds, usar imageUrls como fallback para compatibilidad
-        setImageUrls(product.imageUrls ? product.imageUrls.filter(url => url) : []);
-        return;
-      }
+  const displayPrice = roundToMultiple(product.price, roundingMultiple, roundingDirection);
 
-      setLoadingImages(true);
-      try {
-        const { images, error } = await getMultipleProductImages(user.uid, product.imageIds);
-        if (error) {
-          console.error('Error cargando imágenes del producto:', error);
-          setImageUrls([]);
-        } else {
-          const validImages = images.filter(img => img.data && !img.error).map(img => img.data);
-          setImageUrls(validImages);
-        }
-      } catch (error) {
-        console.error('Error cargando imágenes:', error);
-        setImageUrls([]);
-      } finally {
-        setLoadingImages(false);
-      }
-    };
-
-    loadImages();
-  }, [user, product.imageIds, product.imageUrls]);
-
-  const validImageUrls = useMemo(() => imageUrls, [imageUrls]);
+  const validImageUrls = useMemo(() => imageUrls || [], [imageUrls]);
 
   const nextImage = (e) => {
     e.stopPropagation();
@@ -66,68 +30,47 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
     );
   };
 
-  useEffect(() => {
-    setIsAnimating(true);
-    const timer = setTimeout(() => setIsAnimating(false), 500);
-    return () => clearTimeout(timer);
-  }, [cardStyle]);
-
-  useEffect(() => {
-    if (!cardRef.current || !isVisible) return; // Solo agregar listeners si es visible
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    const currentCardRef = cardRef.current;
+    if (product.stock === 0 || isAddingToCart) return;
     
-    const handleMouseMove = (e) => {
-      // Solo procesar mouse move si la tarjeta es visible
-      if (!isVisible) return;
-      
-      const rect = currentCardRef.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
-      const rotateX = (y - centerY) / 20;
-      const rotateY = (centerX - x) / 20;
-
-      if (cardStyle === 'crystal-3d') {
-        currentCardRef.style.setProperty('--rotate-x', `${rotateX}deg`);
-        currentCardRef.style.setProperty('--rotate-y', `${rotateY}deg`);
+    setIsAddingToCart(true);
+    
+    // Vibración usando navigator.vibrate (más compatible)
+    try {
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
       }
-
-      if (cardStyle === 'spotlight-hover') {
-        currentCardRef.style.setProperty('--mouse-x', `${x}px`);
-        currentCardRef.style.setProperty('--mouse-y', `${y}px`);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      if (cardStyle === 'crystal-3d') {
-        currentCardRef.style.setProperty('--rotate-x', `0deg`);
-        currentCardRef.style.setProperty('--rotate-y', `0deg`);
-      }
+    } catch (error) {
+      console.log('Vibration not available:', error);
     }
+    
+    // Agregar al carrito
+    addToCart(product);
+    
+    // Resetear estado después de la animación
+    setTimeout(() => {
+      setIsAddingToCart(false);
+    }, 600);
+  };
 
-    currentCardRef.addEventListener('mousemove', handleMouseMove);
-    currentCardRef.addEventListener('mouseleave', handleMouseLeave);
 
-    return () => {
-      currentCardRef.removeEventListener('mousemove', handleMouseMove);
-      currentCardRef.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [cardStyle, isVisible]);
+
+
 
   return (
     <div 
       ref={visibilityRef}
-      className={`product-card-wrapper ${isAnimating ? 'animate-card-change' : ''}`}
+      className={`product-card-wrapper`}
     >
       <div 
         ref={cardRef}
         className={`product-card-container ${!isVisible && hasBeenVisible ? 'opacity-50' : ''}`}
         data-style={cardStyle}
       >
-        <div className="product-card-inner">
-          <div className="product-card-front">
+                  <div className="product-card-inner" onClick={() => onProductClick(product)}>          <div className="product-card-front">
             <div className="relative group/image">
               <img 
                 className="product-card-image" 
@@ -138,6 +81,14 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
                   e.target.src='https://placehold.co/400x400/cccccc/ffffff?text=Error'; 
                 }} 
               />
+              
+              {/* Stock en la esquina inferior de la imagen */}
+              <div className="absolute bottom-2 left-2">
+                <span className={`px-2 py-1 rounded-md text-xs font-bold shadow-lg ${product.stock > 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                  {product.stock > 0 ? `${product.stock}` : 'Agotado'}
+                </span>
+              </div>
+              
               {validImageUrls.length > 1 && (
                 <div className="absolute inset-0 flex justify-between items-center opacity-0 group-hover/image:opacity-100 transition-opacity duration-300">
                   <button 
@@ -156,42 +107,57 @@ const ProductCard = ({ product, addToCart, cardStyle, roundingMultiple, allowDec
               )}
             </div>
             
-            <div className="product-card-info">
-              <div className="product-card-header">
-                <h3 className="product-card-title text-sm">{product.name}</h3>
-                <p className="product-card-price text-lg">
-                  ${formatNumber(displayPrice, allowDecimals)}
-                </p>
+            <button 
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className={`product-card-info-button w-full relative overflow-hidden group ${
+                product.stock === 0 ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+              } 
+              transition-all duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-opacity-50`}
+              style={{ touchAction: 'manipulation' }}
+            >
+              {/* Fondo interactivo sutil */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/3 to-[var(--color-primary)]/8 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
+              
+              {/* Contenido del botón */}
+              <div class="relative z-10 p-2 sm:p-3 text-left">
+                <div class="product-card-header mb-2">
+                  <h3 class="product-card-title text-base sm:text-lg md:text-xl font-bold leading-tight break-words group-hover:text-[var(--color-primary)] transition-colors duration-300 line-clamp-2">
+                    {product.name}
+                  </h3>
+                </div>
+                
+                <div className="product-card-footer flex items-center justify-between gap-2">
+                  <p className="text-xl sm:text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-gradient-start)] to-[var(--color-gradient-end)] leading-tight">
+                    ${formatNumber(displayPrice, allowDecimals)}
+                  </p>
+                  
+                  {/* Indicador visual sutil */}
+                  <div className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity duration-300">
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--color-primary)]" />
+                  </div>
+                </div>
               </div>
               
-              <div className="product-card-footer">
-                <span className={`text-xs font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {product.stock > 0 ? `${product.stock} unidades` : 'Agotado'}
-                </span>
-                
-                <button 
-                  onClick={() => addToCart(product)} 
-                  disabled={product.stock === 0} 
-                  className="product-card-add-button p-1.5"
-                >
-                  <ShoppingCart className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
+              {/* Efecto de ondas al hacer click */}
+              {isAddingToCart && (
+                <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-lg"></div>
+              )}
+            </button>
           </div>
           
           <div className="product-card-back">
             <h3 className="product-card-title">{product.name}</h3>
-            <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-gradient-start)] to-[var(--color-gradient-end)] animate-gradient-x">
+            <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-gradient-start)] to-[var(--color-gradient-end)]">
               ${formatNumber(displayPrice, allowDecimals)}
             </p>
             <button 
-              onClick={() => addToCart(product)} 
+              onClick={(e) => handleAddToCart(e)} 
               disabled={product.stock === 0} 
-              className="w-full bg-[var(--color-primary)] text-[var(--color-primary-text)] py-2 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-[var(--color-primary)] text-[var(--color-primary-text)] py-1.5 px-3 rounded-md font-semibold flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
             >
-              <ShoppingCart className="h-5 w-5" />
-              {product.stock > 0 ? 'Agregar al Carrito' : 'Agotado'}
+              <ShoppingCart className="h-4 w-4" />
+              {product.stock > 0 ? 'Carrito' : 'Agotado'}
             </button>
           </div>
         </div>

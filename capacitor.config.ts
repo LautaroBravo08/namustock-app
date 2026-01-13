@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.namustock.app',
-  appName: 'NamuStock App',
+  appName: 'NamuStock',
   webDir: 'build',
   server: {
     androidScheme: 'https'

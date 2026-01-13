@@ -6,6 +6,7 @@ Una aplicación móvil completa para gestión de inventario y ventas, desarrolla
 
 - **📦 Gestión de Inventario**: Control completo de productos con imágenes
 - **💰 Sistema de Ventas**: Registro y seguimiento de ventas
+- **👑 Sistema Premium**: Suscripciones con MercadoPago/PayPal (150 productos gratis, ilimitados con Premium)
 - **🖼️ Imágenes Optimizadas**: Sistema de chunks sin límites de peso
 - **🔄 Actualizaciones Automáticas**: Sistema de updates in-app
 - **📱 Multiplataforma**: Android e iOS con Capacitor
@@ -54,6 +55,8 @@ npm run quick:deploy:major
 
 - **[Deploy Automático](docs/README-DEPLOY-AUTOMATICO.md)** - Guía completa de deploy
 - **[Actualizaciones In-App](docs/README-ACTUALIZACIONES-IN-APP.md)** - Sistema de updates
+- **[Sistema Premium](SISTEMA-PREMIUM-README.md)** - ⭐ Configuración de suscripciones y pagos
+- **[Pruebas Premium](PRUEBAS-SISTEMA-PREMIUM.md)** - Guía de pruebas del sistema premium
 - **[Desarrollo](docs/README-DESARROLLO.md)** - Guía para desarrolladores
 - **[Notificaciones](docs/README-NOTIFICACIONES.md)** - Sistema de notificaciones
 - **[Historial del Proyecto](HISTORIAL-PROYECTO.md)** - Registro de cambios
@@ -109,8 +112,9 @@ namustock-app/
 ## 🔥 Firebase Configuración
 
 El proyecto utiliza Firebase para:
-- **Firestore**: Base de datos de productos y ventas
+- **Firestore**: Base de datos de productos, ventas y suscripciones
 - **Authentication**: Sistema de usuarios
+- **Functions**: Webhooks para MercadoPago y PayPal
 - **Storage**: Almacenamiento de imágenes (opcional)
 
 ## 🤝 Contribuir
@@ -133,6 +137,10 @@ Este proyecto es privado y está bajo licencia propietaria.
 
 ## 🎯 Roadmap
 
+- [x] Sistema Premium con suscripciones
+- [x] Límite de 150 productos para usuarios gratuitos
+- [x] Integración con MercadoPago
+- [ ] Integración con PayPal
 - [ ] Versión iOS
 - [ ] Dashboard web
 - [ ] Reportes avanzados

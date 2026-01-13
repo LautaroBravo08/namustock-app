@@ -1,5 +1,7 @@
 // Servicio de actualización multiplataforma
 import { Capacitor } from '@capacitor/core';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 class UpdateService {
   constructor() {
@@ -8,6 +10,10 @@ class UpdateService {
     this.updateCheckInterval = parseInt(process.env.REACT_APP_UPDATE_CHECK_INTERVAL) || 300000; // 5 minutos por defecto
     this.isChecking = false;
     this.listeners = [];
+    this.isDownloading = false;
+    this.downloadProgress = 0;
+    this.db = null;
+    this.storage = null;
 
     // Inicializar versión instalada
     this.initializeInstalledVersion();
@@ -23,10 +29,17 @@ class UpdateService {
     });
   }
 
+  // Inicializar con la instancia de Firebase
+  initialize(firebaseApp) {
+    this.db = getFirestore(firebaseApp);
+    this.storage = getStorage(firebaseApp);
+    console.log('🔥 Firebase inicializado para actualizaciones');
+  }
+
   // Obtener versión actual - FORZAR HARDCODEADO
   getCurrentVersionFromPackage() {
     // IGNORAR COMPLETAMENTE PROCESS.ENV - SOLO USAR HARDCODEADO
-    const hardcodedVersion = '1.1.57'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.73'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     
     console.log('📦 FORZANDO versión hardcodeada:', hardcodedVersion);
     console.log('📦 process.env.REACT_APP_VERSION (IGNORADO):', process.env.REACT_APP_VERSION);
@@ -167,72 +180,81 @@ class UpdateService {
     return { available: false, platform: 'electron' };
   }
 
-  // Verificar actualizaciones para móvil
+  // Verificar actualizaciones para móvil desde Firebase Storage
   async checkMobileUpdate() {
     try {
       const platform = Capacitor.getPlatform();
       console.log(`🔍 Verificando actualizaciones para ${platform}...`);
       console.log(`📱 Versión actual: ${this.currentVersion}`);
 
-      // SOLO verificar desde GitHub (fuente única de verdad)
-      const githubRepo = process.env.REACT_APP_GITHUB_REPO;
-      if (!githubRepo) {
-        console.log('❌ No hay repositorio de GitHub configurado');
+      // Verificar desde Firebase
+      if (!this.db) {
+        console.log('❌ Firebase no está inicializado');
         return { available: false, platform: platform };
       }
 
-      // Intentar múltiples métodos para obtener la información del release
-      let release = null;
+      // Obtener información de la última versión desde Firebase
+      const appVersionRef = doc(this.db, 'appConfig', 'version');
+      const versionDoc = await getDoc(appVersionRef);
+
+      if (!versionDoc.exists()) {
+        console.log('❌ No se encontró información de versión en Firebase');
+        return { available: false, platform: platform };
+      }
+
+      const versionData = versionDoc.data();
+      const latestVersion = versionData.version;
       
-      try {
-        // Método 1: API de GitHub
-        const response = await fetch(`https://api.github.com/repos/${githubRepo}/releases/latest`);
-        if (response.ok) {
-          release = await response.json();
-          console.log('✅ Información obtenida desde GitHub API');
-        }
-      } catch (apiError) {
-        console.log('⚠️ GitHub API falló, intentando método alternativo');
-      }
-
-      // Método 2: Si la API falla, mostrar error
-      if (!release) {
-        console.log('❌ No se pudo obtener información del release desde GitHub API');
-        return { available: false, platform: platform };
-      }
-
-      const latestVersion = release.tag_name.replace('v', '');
-      console.log(`🐙 Última versión disponible: ${latestVersion}`);
-
-      // Comparar SOLO con la versión actual del código
-      console.log(`🔍 COMPARANDO VERSIONES:`);
-      console.log(`   Disponible: "${latestVersion}"`);
-      console.log(`   Actual: "${this.currentVersion}"`);
-      console.log(`   ¿Es más nueva?: ${this.isNewerVersion(latestVersion, this.currentVersion)}`);
-
+      console.log('📱 Última versión disponible:', latestVersion);
+      
+      // Comparar versiones
       if (this.isNewerVersion(latestVersion, this.currentVersion)) {
-        console.log(`✅ Nueva versión disponible: ${latestVersion}`);
-        
-        const downloadUrl = this.getMobileDownloadUrl(release);
-        console.log(`📥 URL de descarga: ${downloadUrl}`);
+        // Obtener URL de descarga desde Firebase Storage
+        const downloadUrl = await this.getFirebaseDownloadUrl(versionData.storagePath, latestVersion);
         
         return {
           available: true,
           version: latestVersion,
           currentVersion: this.currentVersion,
-          platform: platform,
+          notes: versionData.notes || 'Nueva versión disponible',
           downloadUrl: downloadUrl,
-          releaseNotes: release.body || 'Nueva versión disponible',
-          release: release // Incluir información completa del release
+          storagePath: versionData.storagePath,
+          fileSize: versionData.fileSize || 'Desconocido',
+          releaseDate: versionData.releaseDate ? new Date(versionData.releaseDate.toDate()) : new Date(),
+          platform: platform,
+          type: 'firebase-storage'
         };
       }
-
-      console.log('✅ Ya tienes la última versión');
+      
       return { available: false, platform: platform };
 
     } catch (error) {
       console.error('❌ Error verificando actualizaciones:', error);
       return { available: false, platform: Capacitor.getPlatform() };
+    }
+  }
+
+  // Obtener URL de descarga desde Firebase Storage
+  async getFirebaseDownloadUrl(storagePath, version) {
+    try {
+      if (!this.storage) {
+        throw new Error('Firebase Storage no está inicializado');
+      }
+
+      const { ref, getDownloadURL } = await import('firebase/storage');
+      
+      // Crear referencia al archivo en Firebase Storage
+      const fileRef = ref(this.storage, storagePath);
+      
+      // Obtener URL de descarga
+      const downloadUrl = await getDownloadURL(fileRef);
+      
+      console.log('✅ URL de descarga obtenida desde Firebase Storage:', downloadUrl);
+      return downloadUrl;
+      
+    } catch (error) {
+      console.error('❌ Error obteniendo URL de Firebase Storage:', error);
+      throw new Error(`Error obteniendo archivo: ${error.message}`);
     }
   }
 
@@ -629,15 +651,15 @@ class UpdateService {
     }
   }
 
-  // Descargar e instalar APK en Android - MEJORADO
+  // Descargar e instalar APK desde Firebase Storage - OPTIMIZADO
   async downloadAndInstallAndroid(updateInfo) {
     try {
-      console.log('📱 Iniciando descarga in-app del APK...');
+      console.log('📱 Iniciando descarga desde Firebase Storage...');
       console.log('🔗 URL de descarga:', updateInfo.downloadUrl);
       
       // Verificar que la URL sea válida
-      if (!updateInfo.downloadUrl || !updateInfo.downloadUrl.startsWith('http')) {
-        throw new Error('URL de descarga inválida');
+      if (!updateInfo.downloadUrl || !updateInfo.downloadUrl.startsWith('https://firebasestorage.googleapis.com')) {
+        throw new Error('URL de descarga de Firebase Storage inválida');
       }
       
       // Importar plugins de Capacitor necesarios
@@ -654,48 +676,41 @@ class UpdateService {
       // Crear nombre único para el APK
       const fileName = `namustock-${updateInfo.version}.apk`;
 
-      console.log('⬇️ Descargando APK desde:', updateInfo.downloadUrl);
+      console.log('⬇️ Descargando APK desde Firebase Storage:', updateInfo.downloadUrl);
       
       // Notificar inicio de descarga
       this.notifyListeners({
         type: 'download-progress',
         progress: 5,
-        message: 'Conectando al servidor...'
+        message: 'Conectando a Firebase Storage...'
       });
 
-      // MÉTODO 1: Descarga segura con fetch mejorado
-      console.log('🔄 Método 1: Descarga segura con fetch');
+      // DESCARGA OPTIMIZADA DESDE FIREBASE STORAGE
+      console.log('🔄 Descarga directa desde Firebase Storage');
       let response = null;
-      let fetchError = null;
       
       try {
         response = await fetch(updateInfo.downloadUrl, {
           method: 'GET',
           mode: 'cors',
-          credentials: 'omit', // No enviar cookies por seguridad
+          credentials: 'omit',
           headers: {
             'Accept': 'application/vnd.android.package-archive,application/octet-stream,*/*',
-            'User-Agent': `NamuStock-App/${updateInfo.version} (Android; Secure)`,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'X-Requested-With': 'NamuStock-SecureUpdate'
+            'User-Agent': `NamuStock-App/${updateInfo.version} (Android; Firebase)`,
+            'Cache-Control': 'no-cache'
           }
         });
         
         if (response.ok) {
-          console.log('✅ Fetch directo exitoso');
+          console.log('✅ Descarga desde Firebase Storage exitosa');
         } else {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('❌ Fetch directo falló:', error);
-        response = null;
-      }
-      
-      // MÉTODO 2: Si fetch falla, usar plugin HTTP de Capacitor
-      if (!response) {
-        console.log('🔄 Método 2: Usando plugin HTTP de Capacitor');
+        console.error('❌ Descarga directa falló:', error);
+        
+        // Fallback: usar plugin HTTP de Capacitor
+        console.log('🔄 Fallback: Usando plugin HTTP de Capacitor');
         try {
           const { CapacitorHttp } = await import('@capacitor/core');
           
@@ -704,14 +719,13 @@ class UpdateService {
             method: 'GET',
             headers: {
               'Accept': 'application/vnd.android.package-archive',
-              'User-Agent': 'NamuStock-App/1.0'
+              'User-Agent': 'NamuStock-App/Firebase'
             },
             responseType: 'blob'
           });
           
           if (httpResponse.status === 200) {
             console.log('✅ Plugin HTTP exitoso');
-            // Convertir la respuesta a formato compatible
             response = {
               ok: true,
               status: httpResponse.status,
@@ -725,78 +739,64 @@ class UpdateService {
           }
         } catch (httpError) {
           console.error('❌ Plugin HTTP falló:', httpError);
-          
-          // MÉTODO 3: Fallback - abrir en navegador
-          console.log('🔄 Método 3: Fallback - abriendo en navegador');
-          window.open(updateInfo.downloadUrl, '_system');
-          throw new Error('Descarga abierta en navegador. Instala manualmente.');
+          throw new Error('No se pudo descargar desde Firebase Storage');
         }
       }
 
       if (!response.ok) {
-        console.error('❌ Respuesta HTTP no exitosa:', response.status, response.statusText);
         throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
       }
-
-      // Verificar tipo de contenido
-      const contentType = response.headers.get('content-type');
-      console.log('📄 Tipo de contenido:', contentType);
 
       // Notificar progreso
       this.notifyListeners({
         type: 'download-progress',
-        progress: 20,
-        message: 'Descargando archivo...'
+        progress: 30,
+        message: 'Descargando archivo desde Firebase...'
       });
 
       // Obtener el blob
       const blob = await response.blob();
-      console.log('📦 Tamaño del archivo:', (blob.size / (1024 * 1024)).toFixed(2), 'MB');
+      const fileSizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+      console.log('📦 Tamaño del archivo:', fileSizeMB, 'MB');
 
       // Notificar progreso
       this.notifyListeners({
         type: 'download-progress',
         progress: 60,
-        message: 'Procesando archivo...'
+        message: `Archivo descargado (${fileSizeMB} MB). Procesando...`
       });
 
-      // Convertir a ArrayBuffer de manera compatible
+      // Convertir a ArrayBuffer
       let arrayBuffer;
       try {
-        if (blob.arrayBuffer) {
-          arrayBuffer = await blob.arrayBuffer();
-        } else {
-          // Fallback para navegadores que no soportan arrayBuffer()
-          arrayBuffer = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(blob);
-          });
-        }
+        arrayBuffer = await blob.arrayBuffer();
       } catch (arrayBufferError) {
         console.log('⚠️ Error obteniendo arrayBuffer, usando método alternativo');
-        // Método alternativo: convertir directamente sin verificación
-        arrayBuffer = new ArrayBuffer(0); // Buffer vacío para continuar
+        arrayBuffer = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(blob);
+        });
       }
       
       // SEGURIDAD: Verificar integridad del APK
       this.notifyListeners({
         type: 'download-progress',
-        progress: 70,
-        message: 'Verificando seguridad del archivo...'
+        progress: 75,
+        message: 'Verificando integridad del archivo...'
       });
       
       const isValidAPK = await this.verifyAPKIntegrity(arrayBuffer, updateInfo.version);
       if (!isValidAPK) {
-        throw new Error('Archivo APK no válido o corrupto por seguridad');
+        throw new Error('Archivo APK no válido o corrupto');
       }
       
       // Notificar progreso
       this.notifyListeners({
         type: 'download-progress',
-        progress: 85,
-        message: 'Archivo verificado. Guardando...'
+        progress: 90,
+        message: 'Archivo verificado. Guardando e instalando...'
       });
       
       // Guardar archivo usando Filesystem
@@ -806,13 +806,13 @@ class UpdateService {
         directory: Directory.Cache
       });
 
-      console.log('✅ APK descargado exitosamente:', result.uri);
+      console.log('✅ APK descargado y guardado:', result.uri);
 
       // Notificar descarga completada
       this.notifyListeners({
         type: 'download-progress',
         progress: 100,
-        message: 'Descarga completada. Preparando instalación...'
+        message: 'Instalando actualización...'
       });
 
       // Instalar APK
@@ -820,25 +820,13 @@ class UpdateService {
       
       return true;
     } catch (error) {
-      console.error('❌ Error detallado en descarga/instalación:', error);
+      console.error('❌ Error detallado en descarga/instalación desde Firebase:', error);
       
       // Notificar error específico
       this.notifyListeners({
         type: 'update-error',
-        message: `Error: ${error.message}`
+        message: `Error descargando desde Firebase: ${error.message}`
       });
-      
-      // Fallback: abrir en navegador del sistema
-      console.log('🔄 Activando fallback: abriendo en navegador del sistema');
-      try {
-        window.open(updateInfo.downloadUrl, '_system');
-        this.notifyListeners({
-          type: 'update-error',
-          message: 'Descarga abierta en navegador. Instala manualmente.'
-        });
-      } catch (fallbackError) {
-        console.error('❌ Error en fallback:', fallbackError);
-      }
       
       throw error;
     }
@@ -1066,6 +1054,50 @@ class UpdateService {
   async showInstallConfirmationDialog(updateInfo) {
     console.log('🚀 Instalación automática confirmada para v' + updateInfo.version);
     return true; // Siempre confirmar automáticamente
+  }
+
+  // Mostrar diálogo explicativo de permisos
+  async showPermissionExplanationDialog(permissions, updateInfo) {
+    return new Promise((resolve) => {
+      console.log('🔐 Mostrando diálogo de explicación de permisos...');
+      
+      const dialogInfo = {
+        type: 'permission-explanation-dialog',
+        title: 'Permisos necesarios',
+        message: `Para instalar la actualización v${updateInfo.version} automáticamente, necesitamos algunos permisos:`,
+        permissions: permissions,
+        updateInfo: updateInfo,
+        actions: [
+          {
+            text: 'Conceder permisos',
+            action: 'grant',
+            primary: true
+          },
+          {
+            text: 'Cancelar',
+            action: 'deny',
+            primary: false
+          }
+        ]
+      };
+      
+      this.notifyListeners(dialogInfo);
+      
+      const handleResponse = (response) => {
+        if (response.type === 'permission-dialog-response') {
+          this.removeListener(handleResponse);
+          resolve(response.action === 'grant');
+        }
+      };
+      
+      this.addListener(handleResponse);
+      
+      // Timeout de 30 segundos
+      setTimeout(() => {
+        this.removeListener(handleResponse);
+        resolve(false);
+      }, 30000);
+    });
   }
 
   // Solicitar permisos explícitos antes de la instalación

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug, Heart } from 'lucide-react';
+import { User, LogOut, Settings, Sun, Download, Upload, RefreshCw, Info, Bug, Star } from 'lucide-react';
 import { logoutUser } from '../firebase/auth';
 import updateService from '../services/updateService';
 
@@ -8,8 +8,9 @@ const UserMenu = ({
   onAppearanceClick, 
   onSettingsClick, 
   onImportExportClick, 
-  onOpenSupportModal, 
-  showNotification 
+  onOpenPremiumModal, 
+  showNotification,
+  isPremium = false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
@@ -18,7 +19,7 @@ const UserMenu = ({
   // Obtener versión de la aplicación
   const getAppVersion = () => {
     // HARDCODEAR versión igual que en updateService - NO USAR PROCESS.ENV
-    const hardcodedVersion = '1.1.57'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
+    const hardcodedVersion = '1.1.73'; // ← ACTUALIZAR ESTA LÍNEA EN CADA RELEASE
     return `v${hardcodedVersion}`;
   };
 
@@ -144,11 +145,16 @@ const UserMenu = ({
           </button>
 
           <button
-            onClick={() => { onOpenSupportModal(); setIsMenuOpen(false); }}
-            className="w-full text-left px-4 py-2 text-sm text-yellow-500 hover:bg-yellow-50 flex items-center gap-2 font-semibold"
+            onClick={() => { onOpenPremiumModal(); setIsMenuOpen(false); }}
+            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 font-semibold transition-colors ${
+              isPremium 
+                ? 'text-yellow-400 hover:bg-yellow-50/10 cursor-default'
+                : 'text-yellow-500 hover:bg-yellow-50 hover:text-yellow-600'
+            }`}
+            disabled={isPremium}
           >
-            <Heart className="h-4 w-4" /> 
-            Apoyar el Proyecto
+            <Star className="h-4 w-4" /> 
+            {isPremium ? 'Premium Activo' : 'Mejorar a Premium'}
           </button>
 
           <button 

@@ -17,9 +17,17 @@ const AuthModal = ({ isOpen, onClose, showNotification }) => {
   useBodyScrollLock(isOpen);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    let processedValue = value;
+
+    // Capitalizar primera letra de cada palabra para el nombre
+    if (name === 'displayName') {
+      processedValue = value.replace(/\b\w/g, l => l.toUpperCase());
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: processedValue
     });
   };
 

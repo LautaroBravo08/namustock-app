@@ -1,121 +1,191 @@
 // Theme definitions for the application
 
 export const themes = {
+  // Temas Claros
   'default-light': { 
-    name: 'Claro (Defecto)', 
+    name: 'Claro Moderno', 
     type: 'light', 
     colors: { 
-      '--color-bg': '#f9fafb', 
+      '--color-bg': '#fafafa', 
       '--color-bg-secondary': '#ffffff', 
-      '--color-bg-navbar': 'rgba(255, 255, 255, 0.7)', 
-      '--color-text-primary': '#111827', 
-      '--color-text-secondary': '#6b7280', 
-      '--color-border': '#e5e7eb', 
-      '--color-primary': '#4f46e5', 
-      '--color-primary-hover': '#4338ca', 
+      '--color-bg-navbar': 'rgba(255, 255, 255, 0.85)', 
+      '--color-text-primary': '#1a1a1a', 
+      '--color-text-secondary': '#666666', 
+      '--color-border': '#e0e0e0', 
+      '--color-primary': '#2563eb', 
+      '--color-primary-hover': '#1d4ed8', 
       '--color-primary-text': '#ffffff', 
-      '--color-gradient-start': '#4f46e5', 
-      '--color-gradient-end': '#a855f7' 
+      '--color-gradient-start': '#2563eb', 
+      '--color-gradient-end': '#7c3aed' 
     } 
   },
-  'solarized-light': { 
-    name: 'Solarizado Claro', 
+  'aurora-light': { 
+    name: 'Aurora Boreal', 
     type: 'light', 
     colors: { 
-      '--color-bg': '#fdf6e3', 
-      '--color-bg-secondary': '#eee8d5', 
-      '--color-bg-navbar': 'rgba(249, 246, 227, 0.7)', 
-      '--color-text-primary': '#073642', 
-      '--color-text-secondary': '#586e75', 
-      '--color-border': '#93a1a1', 
-      '--color-primary': '#268bd2', 
-      '--color-primary-hover': '#1a6b9e', 
-      '--color-primary-text': '#ffffff', 
-      '--color-gradient-start': '#268bd2', 
-      '--color-gradient-end': '#2aa198' 
-    } 
-  },
-  'minty-fresh': { 
-    name: 'Menta Fresca', 
-    type: 'light', 
-    colors: { 
-      '--color-bg': '#f1f8f5', 
+      '--color-bg': '#f0f9ff', 
       '--color-bg-secondary': '#ffffff', 
-      '--color-bg-navbar': 'rgba(255, 255, 255, 0.7)', 
-      '--color-text-primary': '#022c22', 
-      '--color-text-secondary': '#3d5245', 
-      '--color-border': '#d1e0d9', 
-      '--color-primary': '#00796b', 
-      '--color-primary-hover': '#004d40', 
+      '--color-bg-navbar': 'rgba(240, 249, 255, 0.9)', 
+      '--color-text-primary': '#0c4a6e', 
+      '--color-text-secondary': '#0369a1', 
+      '--color-border': '#bae6fd', 
+      '--color-primary': '#0ea5e9', 
+      '--color-primary-hover': '#0284c7', 
       '--color-primary-text': '#ffffff', 
-      '--color-gradient-start': '#00796b', 
-      '--color-gradient-end': '#80cbc4' 
+      '--color-gradient-start': '#0ea5e9', 
+      '--color-gradient-end': '#06b6d4' 
     } 
   },
+  'sunset-warm': { 
+    name: 'Atardecer Cálido', 
+    type: 'light', 
+    colors: { 
+      '--color-bg': '#fff7ed', 
+      '--color-bg-secondary': '#ffffff', 
+      '--color-bg-navbar': 'rgba(255, 247, 237, 0.9)', 
+      '--color-text-primary': '#9a3412', 
+      '--color-text-secondary': '#c2410c', 
+      '--color-border': '#fed7aa', 
+      '--color-primary': '#ea580c', 
+      '--color-primary-hover': '#dc2626', 
+      '--color-primary-text': '#ffffff', 
+      '--color-gradient-start': '#ea580c', 
+      '--color-gradient-end': '#f59e0b' 
+    } 
+  },
+  'forest-green': { 
+    name: 'Bosque Esmeralda', 
+    type: 'light', 
+    colors: { 
+      '--color-bg': '#f0fdf4', 
+      '--color-bg-secondary': '#ffffff', 
+      '--color-bg-navbar': 'rgba(240, 253, 244, 0.9)', 
+      '--color-text-primary': '#14532d', 
+      '--color-text-secondary': '#166534', 
+      '--color-border': '#bbf7d0', 
+      '--color-primary': '#16a34a', 
+      '--color-primary-hover': '#15803d', 
+      '--color-primary-text': '#ffffff', 
+      '--color-gradient-start': '#16a34a', 
+      '--color-gradient-end': '#22c55e' 
+    } 
+  },
+
+  // Temas Oscuros
   'default-dark': { 
-    name: 'Noche (Oscuro)', 
+    name: 'Noche Profunda', 
     type: 'dark', 
     colors: { 
-      '--color-bg': '#111827', 
-      '--color-bg-secondary': '#1f2937', 
-      '--color-bg-navbar': 'rgba(31, 41, 55, 0.7)', 
-      '--color-text-primary': '#f9fafb', 
-      '--color-text-secondary': '#9ca3af', 
-      '--color-border': '#374151', 
-      '--color-primary': '#6366f1', 
-      '--color-primary-hover': '#4f46e5', 
+      '--color-bg': '#0a0a0a', 
+      '--color-bg-secondary': '#1a1a1a', 
+      '--color-bg-navbar': 'rgba(26, 26, 26, 0.85)', 
+      '--color-text-primary': '#ffffff', 
+      '--color-text-secondary': '#a3a3a3', 
+      '--color-border': '#404040', 
+      '--color-primary': '#3b82f6', 
+      '--color-primary-hover': '#2563eb', 
       '--color-primary-text': '#ffffff', 
-      '--glow-color-rgb': '99, 102, 241', 
-      '--color-gradient-start': '#6366f1', 
-      '--color-gradient-end': '#818cf8' 
+      '--glow-color-rgb': '59, 130, 246', 
+      '--color-gradient-start': '#3b82f6', 
+      '--color-gradient-end': '#8b5cf6' 
     } 
   },
-  'midnight-dusk': { 
-    name: 'Ocaso', 
-    type: 'dark', 
-    colors: { 
-      '--color-bg': '#0f172a', 
-      '--color-bg-secondary': '#1e293b', 
-      '--color-bg-navbar': 'rgba(30, 41, 59, 0.7)', 
-      '--color-text-primary': '#e2e8f0', 
-      '--color-text-secondary': '#94a3b8', 
-      '--color-border': '#334155', 
-      '--color-primary': '#22d3ee', 
-      '--color-primary-hover': '#06b6d4', 
-      '--color-primary-text': '#0f172a', 
-      '--glow-color-rgb': '34, 211, 238', 
-      '--color-gradient-start': '#22d3ee', 
-      '--color-gradient-end': '#67e8f9' 
-    } 
-  },
-  'cyberpunk': { 
-    name: 'Cyberpunk', 
+  'cyberpunk-neon': { 
+    name: 'Cyberpunk Neón', 
     type: 'dark', 
     colors: { 
       '--color-bg': '#000000', 
-      '--color-bg-secondary': '#1a001a', 
-      '--color-bg-navbar': 'rgba(26, 0, 26, 0.7)', 
-      '--color-text-primary': '#f0f0f0', 
-      '--color-text-secondary': '#a0a0a0', 
-      '--color-border': '#ff00ff', 
-      '--color-primary': '#00f0ff', 
-      '--color-primary-hover': '#00b8c7', 
+      '--color-bg-secondary': '#0d0d0d', 
+      '--color-bg-navbar': 'rgba(13, 13, 13, 0.9)', 
+      '--color-text-primary': '#00ff41', 
+      '--color-text-secondary': '#00cc33', 
+      '--color-border': '#ff0080', 
+      '--color-primary': '#ff0080', 
+      '--color-primary-hover': '#cc0066', 
       '--color-primary-text': '#000000', 
-      '--glow-color-rgb': '0, 240, 255', 
-      '--color-gradient-start': '#00f0ff', 
-      '--color-gradient-end': '#ff00ff' 
+      '--glow-color-rgb': '255, 0, 128', 
+      '--color-gradient-start': '#ff0080', 
+      '--color-gradient-end': '#00ff41' 
+    } 
+  },
+  'midnight-purple': { 
+    name: 'Medianoche Púrpura', 
+    type: 'dark', 
+    colors: { 
+      '--color-bg': '#0f0a1a', 
+      '--color-bg-secondary': '#1a0f2e', 
+      '--color-bg-navbar': 'rgba(26, 15, 46, 0.9)', 
+      '--color-text-primary': '#e9d5ff', 
+      '--color-text-secondary': '#c4b5fd', 
+      '--color-border': '#6b46c1', 
+      '--color-primary': '#8b5cf6', 
+      '--color-primary-hover': '#7c3aed', 
+      '--color-primary-text': '#ffffff', 
+      '--glow-color-rgb': '139, 92, 246', 
+      '--color-gradient-start': '#8b5cf6', 
+      '--color-gradient-end': '#a855f7' 
+    } 
+  },
+  'ocean-depths': { 
+    name: 'Profundidades Oceánicas', 
+    type: 'dark', 
+    colors: { 
+      '--color-bg': '#0c1821', 
+      '--color-bg-secondary': '#1e3a5f', 
+      '--color-bg-navbar': 'rgba(30, 58, 95, 0.9)', 
+      '--color-text-primary': '#e0f2fe', 
+      '--color-text-secondary': '#b3e5fc', 
+      '--color-border': '#0891b2', 
+      '--color-primary': '#06b6d4', 
+      '--color-primary-hover': '#0891b2', 
+      '--color-primary-text': '#ffffff', 
+      '--glow-color-rgb': '6, 182, 212', 
+      '--color-gradient-start': '#06b6d4', 
+      '--color-gradient-end': '#0ea5e9' 
+    } 
+  },
+  'volcanic-red': { 
+    name: 'Volcán Ardiente', 
+    type: 'dark', 
+    colors: { 
+      '--color-bg': '#1a0a0a', 
+      '--color-bg-secondary': '#2d1b1b', 
+      '--color-bg-navbar': 'rgba(45, 27, 27, 0.9)', 
+      '--color-text-primary': '#fecaca', 
+      '--color-text-secondary': '#fca5a5', 
+      '--color-border': '#dc2626', 
+      '--color-primary': '#ef4444', 
+      '--color-primary-hover': '#dc2626', 
+      '--color-primary-text': '#ffffff', 
+      '--glow-color-rgb': '239, 68, 68', 
+      '--color-gradient-start': '#ef4444', 
+      '--color-gradient-end': '#f97316' 
+    } 
+  },
+  'matrix-green': { 
+    name: 'Matrix Verde', 
+    type: 'dark', 
+    colors: { 
+      '--color-bg': '#000000', 
+      '--color-bg-secondary': '#001a00', 
+      '--color-bg-navbar': 'rgba(0, 26, 0, 0.9)', 
+      '--color-text-primary': '#00ff00', 
+      '--color-text-secondary': '#00cc00', 
+      '--color-border': '#008000', 
+      '--color-primary': '#00ff00', 
+      '--color-primary-hover': '#00cc00', 
+      '--color-primary-text': '#000000', 
+      '--glow-color-rgb': '0, 255, 0', 
+      '--color-gradient-start': '#00ff00', 
+      '--color-gradient-end': '#32cd32' 
     } 
   },
 };
 
 export const cardStyles = {
   'default': { name: 'Defecto' },
-  'flip-3d': { name: 'Flip 3D' },
-  'crystal-3d': { name: 'Cristal 3D' },
-  'lava-lamp': { name: 'Lava Ardiente' },
-  'laser-beam': { name: 'Rayo Láser' },
   'neon-flicker': { name: 'Neón Parpadeante' },
-  'comic-book': { name: 'Libro de Cómics' },
-  'spotlight-hover': { name: 'Foco de Luz' },
-  'accordion-info': { name: 'Acordeón' },
+  'minimalist': { name: 'Minimalista' },
+  'holographic': { name: 'Holográfico' },
+  'retro': { name: 'Retro' },
 };

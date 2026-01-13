@@ -1,6 +1,6 @@
 {
   "name": "namustock-app",
-  "version": "1.1.57",
+  "version": "1.1.73",
   "private": true,
   "dependencies": {
     "@capacitor-community/file-opener": "^7.0.1",
@@ -18,6 +18,7 @@
     "@capacitor/local-notifications": "^7.0.1",
     "@capacitor/push-notifications": "^7.0.1",
     "@google/generative-ai": "^0.24.1",
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.1",
     "@testing-library/user-event": "^14.5.2",
@@ -28,8 +29,10 @@
     "electron-builder": "^26.0.12",
     "express": "^5.1.0",
     "firebase": "^12.0.0",
+    "firebase-admin": "^12.0.0",
     "localforage": "^1.10.0",
     "lucide-react": "^0.445.0",
+    "mercadopago": "^2.9.0",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -82,7 +85,19 @@
     "deploy:github:draft": "node auto-deploy-github.js patch --clean --auto --draft",
     "quick:deploy": "node deploy-quick.js patch",
     "quick:deploy:minor": "node deploy-quick.js minor",
-    "quick:deploy:major": "node deploy-quick.js major"
+    "quick:deploy:major": "node deploy-quick.js major",
+    "firebase:deploy": "node firebase-deploy.js patch --clean --auto",
+    "firebase:deploy:minor": "node firebase-deploy.js minor --clean --auto",
+    "firebase:deploy:major": "node firebase-deploy.js major --clean --auto",
+    "firebase:quick": "node firebase-quick-deploy.js patch",
+    "firebase:quick:minor": "node firebase-quick-deploy.js minor",
+    "firebase:quick:major": "node firebase-quick-deploy.js major",
+    "firebase:simple": "node firebase-simple-deploy.js patch",
+    "firebase:simple:minor": "node firebase-simple-deploy.js minor",
+    "firebase:simple:major": "node firebase-simple-deploy.js major",
+    "firebase:auto": "node firebase-auto-deploy.js patch",
+    "firebase:auto:minor": "node firebase-auto-deploy.js minor",
+    "firebase:auto:major": "node firebase-auto-deploy.js major"
   },
   "eslintConfig": {
     "extends": [
@@ -103,6 +118,7 @@
     ]
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1"

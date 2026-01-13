@@ -139,7 +139,10 @@ dist_electron/
 # Firebase
 .firebase/
 firebase-debug.log
-firestore-debug.log# Android s
+firestore-debug.log
+firebase-credentials.json
+*-adminsdk-*.json
+temp-*.js# Android s
 igning
 android/keystore.properties
 android/app/*.keystore

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Tu configuración de Firebase
@@ -21,4 +21,20 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Activar persistencia offline de Firestore
+try {
+  enableIndexedDbPersistence(db)
+    .then(() => console.log('✅ Persistencia de Firestore activada.'))
+    .catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn('❌ Persistencia de Firestore falló: múltiples pestañas abiertas?');
+        } else if (err.code == 'unimplemented') {
+            console.warn('❌ Persistencia de Firestore no soportada en este navegador.');
+        }
+    });
+} catch (e) {
+  console.error('❌ Error general activando persistencia:', e);
+}
+
 export default app;

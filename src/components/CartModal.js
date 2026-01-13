@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useRandomGlow } from '../hooks/useRandomGlow';
-import { roundUpToMultiple, formatNumber } from '../utils/helpers';
+import { roundToMultiple, formatNumber } from '../utils/helpers';
 
 const CartModal = ({ 
   isOpen, 
@@ -13,6 +13,7 @@ const CartModal = ({
   handleCheckout, 
   themeType, 
   roundingMultiple, 
+  roundingDirection, 
   allowDecimals 
 }) => {
   const { isGlowActive } = useRandomGlow(isOpen && themeType === 'dark');
@@ -20,15 +21,17 @@ const CartModal = ({
 
   if (!isOpen) return null;
 
-  const total = roundUpToMultiple(
+  const total = roundToMultiple(
     cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0), 
-    roundingMultiple
+    roundingMultiple,
+    roundingDirection
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-4 transition-opacity duration-300">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex justify-center items-center p-4 transition-opacity duration-300" onClick={onClose}>
       <div
         className={`bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 ease-out border border-[var(--color-border)] ${isGlowActive ? 'dark-glow' : ''} ${themeType === 'light' ? 'light-shadow' : ''}`}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 border-b border-[var(--color-border)]">
           <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Carrito de Compras</h2>
