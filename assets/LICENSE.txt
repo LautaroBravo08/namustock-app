@@ -1,0 +1,44 @@
+ACUERDO DE LICENCIA DE USUARIO FINAL - NamuStock
+
+Fecha de última actualización: Junio 2026
+
+Al instalar y utilizar NamuStock, usted acepta los siguientes términos y condiciones:
+
+1. LICENCIA DE USO
+   NamuStock le otorga una licencia personal, no exclusiva e intransferible para utilizar 
+   esta aplicación en su dispositivo. La aplicación está diseñada para la gestión de 
+   inventario y ventas de negocios.
+
+2. USO PERMITIDO
+   - Gestión de inventario y control de stock
+   - Registro y seguimiento de ventas
+   - Generación de reportes y estadísticas
+   - Uso comercial dentro de su negocio
+
+3. RESTRICCIONES
+   - No podrá modificar, descompilar ni realizar ingeniería inversa del software
+   - No podrá redistribuir o sublicenciar el software sin autorización
+   - No podrá utilizar el software para actividades ilegales
+
+4. DATOS Y PRIVACIDAD
+   - Sus datos se almacenan de forma segura utilizando Firebase
+   - No compartimos su información con terceros
+   - Usted es responsable de mantener la confidencialidad de su cuenta
+
+5. ACTUALIZACIONES
+   - La aplicación puede descargar e instalar actualizaciones automáticamente
+   - Las actualizaciones pueden incluir correcciones de errores y nuevas funcionalidades
+
+6. GARANTÍA LIMITADA
+   El software se proporciona "tal cual", sin garantías de ningún tipo, expresas o 
+   implícitas. NamuStock no será responsable por daños directos o indirectos derivados 
+   del uso del software.
+
+7. SOPORTE
+   Para soporte técnico, contactar a través del repositorio oficial del proyecto.
+
+8. TERMINACIÓN
+   Esta licencia se termina automáticamente si usted viola cualquiera de sus términos. 
+   Al terminar, deberá desinstalar y eliminar todas las copias del software.
+
+© 2026 NamuStock. Todos los derechos reservados.
